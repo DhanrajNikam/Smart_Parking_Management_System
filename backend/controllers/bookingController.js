@@ -1,9 +1,9 @@
 const db = require("../config/db");
+const { createNotification } = require("../utils/notificationHelper");
 
 // ======================================
 // CREATE BOOKING
 // ======================================
-
 exports.createBooking = async (req, res) => {
   const {
     location_id,
@@ -20,61 +20,40 @@ exports.createBooking = async (req, res) => {
 
   try {
     // ================= VALIDATION =================
-
     if (!location_id || !slot_id || !booking_date || !start_time || !duration) {
       return res.status(400).json({
         message: "Missing required fields"
       });
     }
 
-    // ================= SQL OVERLAP CHECK =================
-    // Overlap condition:
-    // existing_start < new_end
-    // AND
-    // existing_end > new_start
-
+    // ================= CHECK OVERLAP =================
     const [conflicts] = await db.promise().query(
-      `SELECT id, booking_code
+      `SELECT id
        FROM bookings
        WHERE slot_id = ?
        AND booking_date = ?
        AND status IN ('active', 'pending')
        AND start_time < ADDTIME(?, SEC_TO_TIME(? * 3600))
        AND ADDTIME(start_time, SEC_TO_TIME(duration * 3600)) > ?`,
-      [
-        slot_id,
-        booking_date,
-        start_time,
-        duration,
-        start_time
-      ]
+      [slot_id, booking_date, start_time, duration, start_time]
     );
 
     if (conflicts.length > 0) {
       return res.status(409).json({
-        message: "Slot already booked for selected time",
-        conflict_with: conflicts[0].booking_code
+        message: "Slot already booked for selected time"
       });
     }
 
-    // ================= PRICE CALCULATION =================
-
+    // ================= PRICE =================
     const [locationData] = await db.promise().query(
       "SELECT price_per_hour FROM parking_locations WHERE id = ?",
       [location_id]
     );
 
-    let pricePerHour = 40;
-
-    if (locationData.length > 0) {
-      pricePerHour = locationData[0].price_per_hour;
-    }
-
-    const calculatedPrice =
-      total_price || Number(duration) * Number(pricePerHour);
+    const pricePerHour = locationData[0]?.price_per_hour || 40;
+    const calculatedPrice = total_price || Number(duration) * pricePerHour;
 
     // ================= CREATE BOOKING =================
-
     const bookingCode = "BK" + Date.now();
 
     const [result] = await db.promise().query(
@@ -107,48 +86,50 @@ exports.createBooking = async (req, res) => {
       ]
     );
 
-    // ================= OPTIONAL SLOT STATUS UPDATE =================
+    const bookingId = result.insertId;
 
-    await db.promise().query(
-      "UPDATE slots SET status = 'occupied' WHERE id = ?",
-      [slot_id]
+    // ================= NOTIFICATION =================
+    await createNotification(
+      user_id,
+      `🚗 Booking created | Slot ${slot_id} | ${booking_date} ${start_time}`,
+      "info",
+      bookingId
     );
 
+    // ❌ IMPORTANT: DO NOT OCCUPY SLOT HERE
+
     res.status(201).json({
-      message: "Booking created successfully. Please complete payment.",
-      booking_id: result.insertId,
+      message: "Booking created. Please complete payment.",
+      booking_id: bookingId,
       booking_code: bookingCode
     });
 
   } catch (error) {
     console.log("Booking Error:", error);
-
-    res.status(500).json({
-      message: "Server error"
-    });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
 // ======================================
 // CANCEL BOOKING
 // ======================================
-
 exports.cancelBooking = async (req, res) => {
   const bookingId = req.params.id;
 
   try {
     const [booking] = await db.promise().query(
-      "SELECT slot_id FROM bookings WHERE id = ?",
+      "SELECT slot_id, user_id FROM bookings WHERE id = ?",
       [bookingId]
     );
 
-    if (booking.length === 0) {
+    if (!booking.length) {
       return res.status(404).json({
         message: "Booking not found"
       });
     }
 
     const slotId = booking[0].slot_id;
+    const user_id = booking[0].user_id;
 
     // Cancel booking
     await db.promise().query(
@@ -162,9 +143,16 @@ exports.cancelBooking = async (req, res) => {
       [slotId]
     );
 
+    // Notification
+    await createNotification(
+      user_id,
+      `❌ Booking cancelled | Slot ${slotId}`,
+      "alert",
+      bookingId
+    );
+
     // Socket update
     const io = req.app.get("io");
-
     if (io) {
       io.emit("slotUpdated", {
         slotId: slotId,
@@ -178,107 +166,58 @@ exports.cancelBooking = async (req, res) => {
 
   } catch (error) {
     console.log(error);
-
-    res.status(500).json({
-      message: "Server error"
-    });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
 // ======================================
 // EXTEND BOOKING
 // ======================================
-
 exports.extendBooking = async (req, res) => {
   const bookingId = req.params.id;
   const { extra_hours } = req.body;
 
   try {
     const [booking] = await db.promise().query(
-      `SELECT duration, location_id, slot_id, booking_date, start_time
-       FROM bookings
-       WHERE id = ?
-       AND status = 'active'`,
+      `SELECT * FROM bookings
+       WHERE id = ? AND status = 'active'`,
       [bookingId]
     );
 
-    if (booking.length === 0) {
+    if (!booking.length) {
       return res.status(404).json({
         message: "Active booking not found"
       });
     }
 
     const b = booking[0];
-
-    const newDuration =
-      Number(b.duration) + Number(extra_hours);
-
-    // ================= CHECK OVERLAP FOR EXTENSION =================
-
-    const [conflicts] = await db.promise().query(
-      `SELECT id, booking_code
-       FROM bookings
-       WHERE slot_id = ?
-       AND booking_date = ?
-       AND status IN ('active', 'pending')
-       AND id != ?
-       AND start_time < ADDTIME(?, SEC_TO_TIME(? * 3600))
-       AND ADDTIME(start_time, SEC_TO_TIME(duration * 3600)) > ?`,
-      [
-        b.slot_id,
-        b.booking_date,
-        bookingId,
-        b.start_time,
-        newDuration,
-        b.start_time
-      ]
-    );
-
-    if (conflicts.length > 0) {
-      return res.status(409).json({
-        message: "Cannot extend booking due to time overlap",
-        conflict_with: conflicts[0].booking_code
-      });
-    }
-
-    // ================= PRICE UPDATE =================
-
-    const [location] = await db.promise().query(
-      "SELECT price_per_hour FROM parking_locations WHERE id = ?",
-      [b.location_id]
-    );
-
-    const pricePerHour = location[0].price_per_hour;
-    const newPrice = newDuration * pricePerHour;
+    const newDuration = Number(b.duration) + Number(extra_hours);
 
     await db.promise().query(
-      "UPDATE bookings SET duration = ?, total_price = ? WHERE id = ?",
-      [
-        newDuration,
-        newPrice,
-        bookingId
-      ]
+      "UPDATE bookings SET duration = ? WHERE id = ?",
+      [newDuration, bookingId]
+    );
+
+    await createNotification(
+      b.user_id,
+      `⏱ Booking extended by ${extra_hours} hour(s)`,
+      "info",
+      bookingId
     );
 
     res.json({
-      message: "Booking extended successfully",
-      new_duration: newDuration,
-      new_total_price: newPrice
+      message: "Booking extended successfully"
     });
 
   } catch (error) {
     console.log(error);
-
-    res.status(500).json({
-      message: "Server error"
-    });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
 // ======================================
 // GET USER BOOKINGS
 // ======================================
-
 exports.getUserBookings = async (req, res) => {
   const user_id = req.user.id;
 
@@ -289,10 +228,8 @@ exports.getUserBookings = async (req, res) => {
           pl.name AS parking_location,
           s.slot_number
        FROM bookings b
-       JOIN parking_locations pl
-         ON b.location_id = pl.id
-       JOIN slots s
-         ON b.slot_id = s.id
+       JOIN parking_locations pl ON b.location_id = pl.id
+       JOIN slots s ON b.slot_id = s.id
        WHERE b.user_id = ?
        ORDER BY b.created_at DESC`,
       [user_id]
@@ -302,9 +239,6 @@ exports.getUserBookings = async (req, res) => {
 
   } catch (error) {
     console.log(error);
-
-    res.status(500).json({
-      message: "Server error"
-    });
+    res.status(500).json({ message: "Server error" });
   }
 };

@@ -1,5 +1,3 @@
-// backend/server.js
-
 require("dotenv").config();
 
 const express = require("express");
@@ -15,7 +13,6 @@ const app = express();
 ==================================================
 AUTO COMPLETE BOOKING CRON
 ==================================================
-
 Only complete booking AFTER:
 start_time + duration < current time
 
@@ -30,10 +27,10 @@ cron.schedule("* * * * *", async () => {
     const [bookings] = await db.promise().query(`
       SELECT 
         id,
+        slot_id,
         booking_date,
         start_time,
-        duration,
-        status
+        duration
       FROM bookings
       WHERE status = 'active'
     `);
@@ -54,18 +51,20 @@ cron.schedule("* * * * *", async () => {
       );
 
       if (now > bookingEnd) {
+
+        // ✅ COMPLETE BOOKING
         await db.promise().query(
-          `
-          UPDATE bookings
-          SET status = 'completed'
-          WHERE id = ?
-          `,
+          `UPDATE bookings SET status = 'completed' WHERE id = ?`,
           [booking.id]
         );
 
-        console.log(
-          `[Cron] Booking ${booking.id} auto-completed`
+        // ✅ FREE SLOT (IMPORTANT FIX)
+        await db.promise().query(
+          `UPDATE slots SET status = 'available' WHERE id = ?`,
+          [booking.slot_id]
         );
+
+        console.log(`[Cron] Booking ${booking.id} auto-completed`);
       }
     }
   } catch (error) {

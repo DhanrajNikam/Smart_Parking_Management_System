@@ -1,5 +1,3 @@
-// backend/config/db.js
-
 const mysql = require("mysql2");
 
 const db = mysql.createConnection({
@@ -7,13 +5,16 @@ const db = mysql.createConnection({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+
+  // ✅ IMPORTANT: Set timezone to IST
+  timezone: "+05:30"
 });
 
 db.connect((err) => {
   if (err) {
     console.log("Database connection failed:", err);
   } else {
-    console.log("MySQL Connected Successfully");
+    console.log("MySQL Connected Successfully (IST Timezone)");
   }
 });
 

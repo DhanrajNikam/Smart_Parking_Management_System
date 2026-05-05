@@ -45,13 +45,26 @@ function Notifications() {
     return "📢";
   };
 
+  // ✅ FORMAT DATE (CLEAN)
+  const formatDate = (date) => {
+    return new Date(date).toLocaleString("en-IN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  };
+
   return (
     <div>
       <Navbar />
+
       <div className="container mt-4">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h2>Notifications</h2>
-          <button className="btn btn-outline-secondary btn-sm" onClick={markAllAsRead}>
+
+          <button
+            className="btn btn-outline-secondary btn-sm"
+            onClick={markAllAsRead}
+          >
             Mark All as Read
           </button>
         </div>
@@ -68,13 +81,21 @@ function Notifications() {
                 }`}
               >
                 <div>
+                  {/* ICON */}
                   <span className="me-2">{getIcon(n.type)}</span>
-                  <span>{n.message}</span>
-                  <br />
+
+                  {/* MESSAGE (MULTILINE SUPPORT) */}
+                  <div style={{ whiteSpace: "pre-line" }}>
+                    {n.message}
+                  </div>
+
+                  {/* DATE */}
                   <small className="text-muted">
-                    {new Date(n.created_at).toLocaleString()}
+                    🕒 {formatDate(n.created_at)}
                   </small>
                 </div>
+
+                {/* MARK READ BUTTON */}
                 {!n.is_read && (
                   <button
                     className="btn btn-sm btn-outline-primary"
@@ -93,4 +114,3 @@ function Notifications() {
 }
 
 export default Notifications;
-
