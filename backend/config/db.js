@@ -15,6 +15,7 @@ db.connect((err) => {
     console.log("Database connection failed:", err);
   } else {
     console.log("MySQL Connected Successfully (IST Timezone)");
+    
   }
 });
 

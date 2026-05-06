@@ -214,31 +214,54 @@ exports.extendBooking = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
 // ======================================
 // GET USER BOOKINGS
 // ======================================
 exports.getUserBookings = async (req, res) => {
   const user_id = req.user.id;
+  const status = req.query.status;
 
   try {
+
+    let query = `
+      SELECT
+        b.*,
+        pl.name AS parking_location,
+        s.slot_number
+      FROM bookings b
+      JOIN parking_locations pl
+        ON b.location_id = pl.id
+      JOIN slots s
+        ON b.slot_id = s.id
+      WHERE b.user_id = ?
+    `;
+
+    let values = [user_id];
+
+    // ✅ FILTER BY STATUS
+    if (
+      status &&
+      status !== "all"
+    ) {
+      query += ` AND b.status = ?`;
+      values.push(status);
+    }
+
+    // ✅ ORDER
+    query += ` ORDER BY b.created_at DESC`;
+
     const [bookings] = await db.promise().query(
-      `SELECT
-          b.*,
-          pl.name AS parking_location,
-          s.slot_number
-       FROM bookings b
-       JOIN parking_locations pl ON b.location_id = pl.id
-       JOIN slots s ON b.slot_id = s.id
-       WHERE b.user_id = ?
-       ORDER BY b.created_at DESC`,
-      [user_id]
+      query,
+      values
     );
 
     res.json(bookings);
 
   } catch (error) {
     console.log(error);
-    res.status(500).json({ message: "Server error" });
+
+    res.status(500).json({
+      message: "Server error"
+    });
   }
 };
