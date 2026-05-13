@@ -378,55 +378,315 @@
 //   }
 // };
 
+// const db = require("../config/db");
+
+// // ================= GET ALL =================
+// exports.getAllLocations = async (req, res) => {
+//   try {
+//     const [rows] = await db.promise().query("SELECT * FROM parking_locations");
+//     res.json(rows);
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// };
+
+// // ================= GET BY ID =================
+// exports.getLocationById = async (req, res) => {
+//   const { id } = req.params;
+//   const [rows] = await db.promise().query(
+//     "SELECT * FROM parking_locations WHERE id = ?",
+//     [id]
+//   );
+//   res.json(rows[0]);
+// };
+
+// // ================= GET SLOTS =================
+// exports.getSlotsByLocation = async (req, res) => {
+//   const { id } = req.params;
+//   const [rows] = await db.promise().query(
+//     "SELECT * FROM slots WHERE location_id = ?",
+//     [id]
+//   );
+//   res.json(rows);
+// };
+
+// // ================= ADD LOCATION + AUTO SLOTS =================
+// exports.addParkingLocation = async (req, res) => {
+//   const { name, address, latitude, longitude, total_slots, price_per_hour } =
+//     req.body;
+
+//   try {
+//     const [result] = await db.promise().query(
+//       `INSERT INTO parking_locations 
+//       (name, address, latitude, longitude, total_slots, price_per_hour)
+//       VALUES (?, ?, ?, ?, ?, ?)`,
+//       [name, address, latitude, longitude, total_slots, price_per_hour]
+//     );
+
+//     const locationId = result.insertId;
+
+//     // 🔥 AUTO CREATE SLOTS
+//     const slots = [];
+//     for (let i = 1; i <= total_slots; i++) {
+//       slots.push([locationId, `A${i}`, "available"]);
+//     }
+
+//     await db.promise().query(
+//       "INSERT INTO slots (location_id, slot_number, status) VALUES ?",
+//       [slots]
+//     );
+
+//     res.json({ message: "Location + slots created" });
+//   } catch (err) {
+//     console.log(err);
+//     res.status(500).json({ error: err.message });
+//   }
+// };
+
+// // ================= ADD SLOT =================
+// exports.addSlot = async (req, res) => {
+//   const { location_id, slot_number } = req.body;
+
+//   await db.promise().query(
+//     "INSERT INTO slots (location_id, slot_number, status) VALUES (?, ?, 'available')",
+//     [location_id, slot_number]
+//   );
+
+//   res.json({ message: "Slot added" });
+// };
+
+// // ================= UPDATE SLOT =================
+// exports.updateSlotStatus = async (req, res) => {
+//   const { slot_id, status } = req.body;
+
+//   await db.promise().query(
+//     "UPDATE slots SET status=? WHERE id=?",
+//     [status, slot_id]
+//   );
+
+//   res.json({ message: "Updated" });
+// };
+
+// // ================= DELETE SLOT =================
+// exports.removeSlot = async (req, res) => {
+//   const { slot_id } = req.body;
+
+//   await db.promise().query(
+//     "DELETE FROM slots WHERE id=?",
+//     [slot_id]
+//   );
+
+//   res.json({ message: "Deleted" });
+// };
+
+// // ================= RATE =================
+// exports.rateParking = async (req, res) => {
+//   const { location_id, rating } = req.body;
+
+//   await db.promise().query(
+//     "INSERT INTO ratings (location_id, rating) VALUES (?, ?)",
+//     [location_id, rating]
+//   );
+
+//   res.json({ message: "Rated" });
+// };
+
+// // ================= REVIEWS =================
+// exports.getLocationReviews = async (req, res) => {
+//   const { id } = req.params;
+
+//   const [rows] = await db.promise().query(
+//     "SELECT * FROM ratings WHERE location_id=?",
+//     [id]
+//   );
+
+//   res.json(rows);
+// };
+
+// // ================= NEARBY =================
+// exports.getNearbyParking = async (req, res) => {
+//   const { latitude, longitude, radius } = req.query;
+
+//   const [rows] = await db.promise().query(
+//     `
+//     SELECT *,
+//     (
+//       6371 * ACOS(
+//         COS(RADIANS(?)) *
+//         COS(RADIANS(latitude)) *
+//         COS(RADIANS(longitude) - RADIANS(?)) +
+//         SIN(RADIANS(?)) *
+//         SIN(RADIANS(latitude))
+//       )
+//     ) AS distance
+//     FROM parking_locations
+//     HAVING distance < ?
+//     ORDER BY distance
+//     `,
+//     [latitude, longitude, latitude, radius || 5]
+//   );
+
+//   res.json({ data: rows });
+// };
+
+
+
 const db = require("../config/db");
 
 // ================= GET ALL =================
 exports.getAllLocations = async (req, res) => {
   try {
-    const [rows] = await db.promise().query("SELECT * FROM parking_locations");
+    const [rows] = await db.promise().query(
+      "SELECT * FROM parking_locations"
+    );
+
     res.json(rows);
+
   } catch (err) {
-    res.status(500).json({ error: err.message });
+
+    console.log(err);
+
+    res.status(500).json({
+      error: err.message
+    });
   }
 };
 
 // ================= GET BY ID =================
 exports.getLocationById = async (req, res) => {
+
   const { id } = req.params;
-  const [rows] = await db.promise().query(
-    "SELECT * FROM parking_locations WHERE id = ?",
-    [id]
-  );
-  res.json(rows[0]);
+
+  try {
+
+    const [rows] = await db.promise().query(
+      "SELECT * FROM parking_locations WHERE id = ?",
+      [id]
+    );
+
+    res.json(rows[0]);
+
+  } catch (err) {
+
+    console.log(err);
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
 };
 
 // ================= GET SLOTS =================
 exports.getSlotsByLocation = async (req, res) => {
+
   const { id } = req.params;
-  const [rows] = await db.promise().query(
-    "SELECT * FROM slots WHERE location_id = ?",
-    [id]
-  );
-  res.json(rows);
+
+  try {
+
+    const [slots] = await db.promise().query(
+      `
+      SELECT 
+        s.*,
+
+        CASE
+
+          -- CURRENT ACTIVE BOOKING
+          WHEN EXISTS (
+            SELECT 1
+            FROM bookings b
+            WHERE b.slot_id = s.id
+            AND b.status IN ('active', 'pending')
+
+            AND NOW() BETWEEN
+              TIMESTAMP(b.booking_date, b.start_time)
+
+            AND DATE_ADD(
+              TIMESTAMP(b.booking_date, b.start_time),
+              INTERVAL b.duration HOUR
+            )
+          )
+          THEN 'occupied'
+
+          -- RESERVED ONLY 15 MIN BEFORE START
+          WHEN EXISTS (
+            SELECT 1
+            FROM bookings b
+            WHERE b.slot_id = s.id
+            AND b.status IN ('active', 'pending')
+
+            AND NOW() >= DATE_SUB(
+              TIMESTAMP(b.booking_date, b.start_time),
+              INTERVAL 15 MINUTE
+            )
+
+            AND NOW() <
+              TIMESTAMP(b.booking_date, b.start_time)
+          )
+          THEN 'reserved'
+
+          ELSE 'available'
+
+        END AS dynamic_status
+
+      FROM slots s
+      WHERE s.location_id = ?
+      ORDER BY s.id ASC
+      `,
+      [id]
+    );
+
+    const formatted = slots.map((slot) => ({
+      ...slot,
+      status: slot.dynamic_status
+    }));
+
+    res.json(formatted);
+
+  } catch (error) {
+
+    console.log("getSlotsByLocation error:", error);
+
+    res.status(500).json({
+      message: "Server error"
+    });
+  }
 };
 
 // ================= ADD LOCATION + AUTO SLOTS =================
 exports.addParkingLocation = async (req, res) => {
-  const { name, address, latitude, longitude, total_slots, price_per_hour } =
-    req.body;
+
+  const {
+    name,
+    address,
+    latitude,
+    longitude,
+    total_slots,
+    price_per_hour
+  } = req.body;
 
   try {
+
     const [result] = await db.promise().query(
-      `INSERT INTO parking_locations 
+      `
+      INSERT INTO parking_locations
       (name, address, latitude, longitude, total_slots, price_per_hour)
-      VALUES (?, ?, ?, ?, ?, ?)`,
-      [name, address, latitude, longitude, total_slots, price_per_hour]
+      VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      [
+        name,
+        address,
+        latitude,
+        longitude,
+        total_slots,
+        price_per_hour
+      ]
     );
 
     const locationId = result.insertId;
 
-    // 🔥 AUTO CREATE SLOTS
+    // AUTO CREATE SLOTS
     const slots = [];
+
     for (let i = 1; i <= total_slots; i++) {
       slots.push([locationId, `A${i}`, "available"]);
     }
@@ -436,95 +696,188 @@ exports.addParkingLocation = async (req, res) => {
       [slots]
     );
 
-    res.json({ message: "Location + slots created" });
+    res.json({
+      message: "Location + slots created"
+    });
+
   } catch (err) {
+
     console.log(err);
-    res.status(500).json({ error: err.message });
+
+    res.status(500).json({
+      error: err.message
+    });
   }
 };
 
 // ================= ADD SLOT =================
 exports.addSlot = async (req, res) => {
+
   const { location_id, slot_number } = req.body;
 
-  await db.promise().query(
-    "INSERT INTO slots (location_id, slot_number, status) VALUES (?, ?, 'available')",
-    [location_id, slot_number]
-  );
+  try {
 
-  res.json({ message: "Slot added" });
+    await db.promise().query(
+      `
+      INSERT INTO slots
+      (location_id, slot_number, status)
+      VALUES (?, ?, 'available')
+      `,
+      [location_id, slot_number]
+    );
+
+    res.json({
+      message: "Slot added"
+    });
+
+  } catch (err) {
+
+    console.log(err);
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
 };
 
 // ================= UPDATE SLOT =================
 exports.updateSlotStatus = async (req, res) => {
+
   const { slot_id, status } = req.body;
 
-  await db.promise().query(
-    "UPDATE slots SET status=? WHERE id=?",
-    [status, slot_id]
-  );
+  try {
 
-  res.json({ message: "Updated" });
+    await db.promise().query(
+      "UPDATE slots SET status = ? WHERE id = ?",
+      [status, slot_id]
+    );
+
+    res.json({
+      message: "Updated"
+    });
+
+  } catch (err) {
+
+    console.log(err);
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
 };
 
 // ================= DELETE SLOT =================
 exports.removeSlot = async (req, res) => {
+
   const { slot_id } = req.body;
 
-  await db.promise().query(
-    "DELETE FROM slots WHERE id=?",
-    [slot_id]
-  );
+  try {
 
-  res.json({ message: "Deleted" });
+    await db.promise().query(
+      "DELETE FROM slots WHERE id = ?",
+      [slot_id]
+    );
+
+    res.json({
+      message: "Deleted"
+    });
+
+  } catch (err) {
+
+    console.log(err);
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
 };
 
 // ================= RATE =================
 exports.rateParking = async (req, res) => {
+
   const { location_id, rating } = req.body;
 
-  await db.promise().query(
-    "INSERT INTO ratings (location_id, rating) VALUES (?, ?)",
-    [location_id, rating]
-  );
+  try {
 
-  res.json({ message: "Rated" });
+    await db.promise().query(
+      "INSERT INTO ratings (location_id, rating) VALUES (?, ?)",
+      [location_id, rating]
+    );
+
+    res.json({
+      message: "Rated"
+    });
+
+  } catch (err) {
+
+    console.log(err);
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
 };
 
 // ================= REVIEWS =================
 exports.getLocationReviews = async (req, res) => {
+
   const { id } = req.params;
 
-  const [rows] = await db.promise().query(
-    "SELECT * FROM ratings WHERE location_id=?",
-    [id]
-  );
+  try {
 
-  res.json(rows);
+    const [rows] = await db.promise().query(
+      "SELECT * FROM ratings WHERE location_id = ?",
+      [id]
+    );
+
+    res.json(rows);
+
+  } catch (err) {
+
+    console.log(err);
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
 };
 
 // ================= NEARBY =================
 exports.getNearbyParking = async (req, res) => {
+
   const { latitude, longitude, radius } = req.query;
 
-  const [rows] = await db.promise().query(
-    `
-    SELECT *,
-    (
-      6371 * ACOS(
-        COS(RADIANS(?)) *
-        COS(RADIANS(latitude)) *
-        COS(RADIANS(longitude) - RADIANS(?)) +
-        SIN(RADIANS(?)) *
-        SIN(RADIANS(latitude))
-      )
-    ) AS distance
-    FROM parking_locations
-    HAVING distance < ?
-    ORDER BY distance
-    `,
-    [latitude, longitude, latitude, radius || 5]
-  );
+  try {
 
-  res.json({ data: rows });
+    const [rows] = await db.promise().query(
+      `
+      SELECT *,
+      (
+        6371 * ACOS(
+          COS(RADIANS(?)) *
+          COS(RADIANS(latitude)) *
+          COS(RADIANS(longitude) - RADIANS(?)) +
+          SIN(RADIANS(?)) *
+          SIN(RADIANS(latitude))
+        )
+      ) AS distance
+      FROM parking_locations
+      HAVING distance < ?
+      ORDER BY distance
+      `,
+      [latitude, longitude, latitude, radius || 5]
+    );
+
+    res.json({
+      data: rows
+    });
+
+  } catch (err) {
+
+    console.log(err);
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
 };

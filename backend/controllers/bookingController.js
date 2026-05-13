@@ -1,5 +1,9 @@
 const db = require("../config/db");
-const { createNotification } = require("../utils/notificationHelper");
+const {
+  createNotification,
+  sendBookingSMS
+} = require("../utils/notificationHelper");
+
 
 // ======================================
 // CREATE BOOKING
@@ -15,6 +19,7 @@ exports.createBooking = async (req, res) => {
     duration,
     total_price
   } = req.body;
+
 
   const user_id = req.user.id;
 
@@ -96,7 +101,25 @@ exports.createBooking = async (req, res) => {
       bookingId
     );
 
+    // ================= SMS =================
+    // Fetch phone number from users table
+    const [userRows] = await db.promise().query(
+      "SELECT phone_number FROM users WHERE id = ?",
+      [user_id]
+    );
+
+    const phone_number = userRows[0]?.phone_number;
+
+    await sendBookingSMS({
+      phone_number,
+      booking_code: bookingCode,
+      slot_id,
+      booking_date,
+      start_time
+    });
+
     // ❌ IMPORTANT: DO NOT OCCUPY SLOT HERE
+
 
     res.status(201).json({
       message: "Booking created. Please complete payment.",
@@ -117,58 +140,159 @@ exports.cancelBooking = async (req, res) => {
   const bookingId = req.params.id;
 
   try {
-    const [booking] = await db.promise().query(
-      "SELECT slot_id, user_id FROM bookings WHERE id = ?",
+    const [rows] = await db.promise().query(
+      `SELECT 
+        b.id,
+        b.booking_code,
+        b.user_id,
+        b.location_id,
+        b.slot_id,
+        b.booking_date,
+        b.start_time,
+        b.duration,
+        b.total_price,
+        pl.address,
+        pl.name AS location_name
+      FROM bookings b
+      JOIN parking_locations pl ON pl.id = b.location_id
+      WHERE b.id = ?`,
       [bookingId]
     );
 
-    if (!booking.length) {
-      return res.status(404).json({
-        message: "Booking not found"
-      });
+    if (!rows.length) {
+      return res.status(404).json({ message: "Booking not found" });
     }
 
-    const slotId = booking[0].slot_id;
-    const user_id = booking[0].user_id;
+    const booking = rows[0];
 
-    // Cancel booking
+    // Policy calculation
+    const now = new Date();
+    const bookingDateStr = booking.booking_date instanceof Date
+      ? booking.booking_date.toISOString().split("T")[0]
+      : booking.booking_date;
+
+    const startDateTime = new Date(`${bookingDateStr}T${booking.start_time}`);
+    const hoursLeft = (startDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+let refundAmount = Number(booking.total_price);
+
+console.log("FORCE REFUND ENABLED");
+console.log("refundAmount:", refundAmount);
+
+    console.log("[cancelBooking] bookingId:", bookingId);
+    console.log("[cancelBooking] hoursLeft:", hoursLeft);
+    console.log("[cancelBooking] total_price:", booking.total_price);
+    console.log("[cancelBooking] refundAmount:", refundAmount);
+
+    // DB transaction for cancellation + wallet credit + transactions
+    await db.promise().beginTransaction();
+
+    // Only cancel if not already cancelled
     await db.promise().query(
-      "UPDATE bookings SET status = 'cancelled' WHERE id = ?",
+      "UPDATE bookings SET status = 'cancelled' WHERE id = ? AND status != 'cancelled'",
       [bookingId]
     );
 
     // Free slot
     await db.promise().query(
       "UPDATE slots SET status = 'available' WHERE id = ?",
-      [slotId]
+      [booking.slot_id]
     );
 
     // Notification
     await createNotification(
-      user_id,
-      `❌ Booking cancelled | Slot ${slotId}`,
+      booking.user_id,
+      `❌ Booking cancelled | Code: ${booking.booking_code} | Refund: ₹${refundAmount.toFixed(2).replace(/\.00$/, "")}`,
       "alert",
       bookingId
     );
+
+    // Wallet credit (only if refundAmount > 0)
+    if (refundAmount > 0) {
+      await db.promise().query(
+        "UPDATE users SET wallet = wallet + ? WHERE id = ?",
+        [refundAmount, booking.user_id]
+      );
+
+      await db.promise().query(
+        `INSERT INTO wallet_transactions (user_id, booking_id, amount, type, description)
+         VALUES (?, ?, ?, 'credit', ?)` ,
+        [
+          booking.user_id,
+          booking.id,
+          refundAmount,
+          `Cancellation refund credited for ${booking.booking_code} (hoursLeft=${hoursLeft.toFixed(2)})`
+        ]
+      );
+    }
+
+    await db.promise().commit();
 
     // Socket update
     const io = req.app.get("io");
     if (io) {
       io.emit("slotUpdated", {
-        slotId: slotId,
+        slotId: booking.slot_id,
         status: "available"
       });
     }
 
-    res.json({
-      message: "Booking cancelled successfully"
-    });
+    // SMS (best-effort)
+    // SMS (best-effort) using helper
+    try {
+      const [userRows] = await db.promise().query(
+        "SELECT phone_number FROM users WHERE id = ?",
+        [booking.user_id]
+      );
+      const phone_number = userRows[0]?.phone_number;
+
+      const endDate = new Date(startDateTime.getTime() + Number(booking.duration) * 60 * 60 * 1000);
+
+      const start_time_display = new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      }).format(startDateTime);
+
+      const end_time_display = new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      }).format(endDate);
+
+      const { sendBookingCancelledSMS } = require("../utils/notificationHelper");
+
+      await sendBookingCancelledSMS({
+        phone_number,
+        booking_code: booking.booking_code,
+        refund_amount: refundAmount,
+        slot_id: booking.slot_id,
+        location_address: booking.address ? booking.address : booking.location_name,
+        start_time_display,
+        end_time_display
+      });
+    } catch (smsErr) {
+      console.log("Cancellation SMS best-effort failed:", smsErr?.message || smsErr);
+    }
+
+    res.json({ message: "Booking cancelled successfully", refund_amount: Number(refundAmount.toFixed(2)) });
 
   } catch (error) {
     console.log(error);
+    try {
+      await db.promise().rollback();
+    } catch (e) {
+      // ignore
+    }
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // ======================================
 // EXTEND BOOKING

@@ -12,8 +12,10 @@ function Login() {
     name: "",
     email: "",
     password: "",
-    role: "user"
+    role: "user",
+    phone_number: ""
   });
+
 
   const handleChange = (e) => {
     setForm({
@@ -31,8 +33,10 @@ function Login() {
           name: form.name,
           email: form.email,
           password: form.password,
-          role: form.role
+          role: form.role,
+          phone_number: form.phone_number
         });
+
 
         alert("Registration successful! Please login.");
         setIsRegister(false);
@@ -139,6 +143,29 @@ function Login() {
                 />
               </div>
             )}
+
+            {isRegister && (
+              <div className="mb-3">
+                <label className="fw-semibold">
+                  Mobile Number
+                </label>
+
+                <input
+                  type="text"
+                  name="phone_number"
+                  className="form-control"
+                  placeholder="Enter Mobile Number"
+                  value={form.phone_number}
+                  onChange={handleChange}
+                  required
+                  style={{
+                    borderRadius: "12px",
+                    padding: "12px"
+                  }}
+                />
+              </div>
+            )}
+
 
             <div className="mb-3">
               <label className="fw-semibold">

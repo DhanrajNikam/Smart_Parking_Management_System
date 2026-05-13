@@ -13,60 +13,41 @@ const app = express();
 ==================================================
 AUTO COMPLETE BOOKING CRON
 ==================================================
-Only complete booking AFTER:
-start_time + duration < current time
-
 Runs every 1 minute
 ==================================================
 */
 
 cron.schedule("* * * * *", async () => {
   try {
-    console.log("[Cron] Checking active bookings...");
 
-    const [bookings] = await db.promise().query(`
-      SELECT 
-        id,
-        slot_id,
-        booking_date,
-        start_time,
-        duration
-      FROM bookings
+    console.log("[Cron] Checking expired bookings...");
+
+    // ✅ COMPLETE EXPIRED BOOKINGS
+    const [result] = await db.promise().query(`
+      UPDATE bookings
+      SET status = 'completed'
       WHERE status = 'active'
+      AND DATE_ADD(
+            TIMESTAMP(booking_date, start_time),
+            INTERVAL duration HOUR
+          ) <= NOW()
     `);
 
-    console.log(`[Cron] Active bookings found: ${bookings.length}`);
+    console.log(
+      `[Cron] Completed bookings: ${result.affectedRows}`
+    );
 
-    const now = new Date();
+    // ✅ FREE COMPLETED BOOKING SLOTS
+    await db.promise().query(`
+      UPDATE slots s
+      JOIN bookings b
+        ON s.id = b.slot_id
+      SET s.status = 'available'
+      WHERE b.status = 'completed'
+    `);
 
-    for (const booking of bookings) {
-      const bookingStart = new Date(
-        `${booking.booking_date}T${booking.start_time}`
-      );
+    console.log("[Cron] Slots updated");
 
-      const bookingEnd = new Date(bookingStart);
-
-      bookingEnd.setHours(
-        bookingEnd.getHours() + Number(booking.duration)
-      );
-
-      if (now > bookingEnd) {
-
-        // ✅ COMPLETE BOOKING
-        await db.promise().query(
-          `UPDATE bookings SET status = 'completed' WHERE id = ?`,
-          [booking.id]
-        );
-
-        // ✅ FREE SLOT (IMPORTANT FIX)
-        await db.promise().query(
-          `UPDATE slots SET status = 'available' WHERE id = ?`,
-          [booking.slot_id]
-        );
-
-        console.log(`[Cron] Booking ${booking.id} auto-completed`);
-      }
-    }
   } catch (error) {
     console.log("[Cron Error]", error);
   }
@@ -113,6 +94,7 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const userRoutes = require("./routes/userRoutes");
 const ratingRoutes = require("./routes/ratingRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const walletRoutes = require("./routes/walletRoutes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/parking", parkingRoutes);
@@ -123,6 +105,8 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/ratings", ratingRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/wallet", walletRoutes);
+
 
 /* ================= ROOT ================= */
 

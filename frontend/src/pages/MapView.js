@@ -108,7 +108,7 @@ function MapView() {
         <MapContainer
           center={location}
           zoom={14}
-          style={{ height: "500px", width: "100%" }}
+          style={{ height: "clamp(320px, 45vh, 500px)", width: "100%" }}
         >
           <TileLayer
             attribution="© OpenStreetMap contributors"

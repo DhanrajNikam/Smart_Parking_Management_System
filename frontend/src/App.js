@@ -12,11 +12,16 @@ import Confirmation from "./pages/Confirmation";
 import MyBookings from "./pages/MyBookings";
 import Notifications from "./pages/Notifications";
 
+import Wallet from "./pages/Wallet";
+import WalletHistory from "./pages/WalletHistory";
+import RefundRequest from "./pages/RefundRequest";
+
 import AdminDashboard from "./admin/AdminDashboard";
 import ManageParking from "./admin/ManageParking";
 import Bookings from "./admin/Bookings";
 import Users from "./admin/Users";
 import Reports from "./admin/Reports";
+import RefundRequests from "./admin/RefundRequests";
 
 function App() {
   return (
@@ -92,6 +97,32 @@ function App() {
           }
         />
 
+        {/* Wallet Routes */}
+        <Route
+          path="/wallet"
+          element={
+            <ProtectedRoute>
+              <Wallet />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/wallet/transactions"
+          element={
+            <ProtectedRoute>
+              <WalletHistory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/refund/request"
+          element={
+            <ProtectedRoute>
+              <RefundRequest />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Admin Routes */}
         <Route
           path="/admin"
@@ -130,6 +161,14 @@ function App() {
           element={
             <ProtectedRoute adminOnly>
               <Reports />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/refund-requests"
+          element={
+            <ProtectedRoute adminOnly>
+              <RefundRequests />
             </ProtectedRoute>
           }
         />

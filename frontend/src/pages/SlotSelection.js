@@ -70,8 +70,8 @@ function SlotSelection() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-            gap: "20px",
+            gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+            gap: "16px",
           }}
         >
           {slots.map((slot) => {

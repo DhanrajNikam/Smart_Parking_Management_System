@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   email VARCHAR(100) NOT NULL UNIQUE,
+phone_number VARCHAR(20) NOT NULL,
   password VARCHAR(255) NOT NULL,
   role ENUM('user','admin') DEFAULT 'user',
   is_active BOOLEAN DEFAULT TRUE,
@@ -125,11 +126,53 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 -- ==========================================
--- INSERT DEFAULT ADMIN USER
--- Password: admin123 (hashed with bcryptjs)
+-- WALLET + REFUND SYSTEM (Wallet Transactions + Refund Requests)
 -- ==========================================
-INSERT IGNORE INTO users (id, name, email, password, role, is_active) VALUES
-(1, 'System Admin', 'admin@smartparking.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', TRUE);
+
+-- Add wallet column to users
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS wallet DECIMAL(10,2) DEFAULT 0;
+
+-- Wallet transaction history
+CREATE TABLE IF NOT EXISTS wallet_transactions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  booking_id INT DEFAULT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  type ENUM('credit','debit') NOT NULL,
+  description VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE SET NULL,
+  INDEX idx_wallet_transactions_user (user_id),
+  INDEX idx_wallet_transactions_booking (booking_id)
+);
+
+-- Refund request workflow
+CREATE TABLE IF NOT EXISTS refund_requests (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  booking_id INT DEFAULT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  upi_id VARCHAR(100) DEFAULT NULL,
+  account_number VARCHAR(50) DEFAULT NULL,
+  ifsc_code VARCHAR(20) DEFAULT NULL,
+  payment_method ENUM('upi','bank') NOT NULL,
+  status ENUM('pending','approved','rejected') DEFAULT 'pending',
+  reason VARCHAR(255) DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE SET NULL,
+  INDEX idx_refund_requests_user (user_id),
+  INDEX idx_refund_requests_booking (booking_id)
+);
+
+-- ==========================================
+-- INSERT DEFAULT ADMIN USER
+-- ==========================================
+INSERT IGNORE INTO users (id, name, email, phone_number, password, role, is_active) VALUES
+(1, 'System Admin', 'admin@smartparking.com', '+0000000000', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', TRUE);
+
 
 -- ==========================================
 -- INSERT SAMPLE PARKING LOCATIONS

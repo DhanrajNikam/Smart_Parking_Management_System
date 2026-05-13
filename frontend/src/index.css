@@ -11,3 +11,33 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Responsive UI helpers (no functional changes) */
+
+/* Map height: override fixed 500px with a responsive clamp */
+.leaflet-container {
+  height: 500px !important;
+}
+
+@media (max-width: 575.98px) {
+  .leaflet-container {
+    height: 320px !important;
+  }
+}
+
+@media (min-width: 576px) and (max-width: 991.98px) {
+  .leaflet-container {
+    height: 420px !important;
+  }
+}
+
+/* Better typography scaling for smaller screens */
+h1,
+.display-3 {
+  font-size: clamp(1.6rem, 4vw, 3rem) !important;
+}
+
+h2 {
+  font-size: clamp(1.25rem, 2.6vw, 2rem) !important;
+}
+

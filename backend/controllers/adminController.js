@@ -374,9 +374,26 @@ exports.forceCancelBooking = async (req, res) => {
   try {
 
     const [booking] = await db.promise().query(
-      "SELECT slot_id, booking_code, user_id, status FROM bookings WHERE id = ?",
+      `SELECT 
+        b.id,
+        b.booking_code,
+        b.user_id,
+        b.location_id,
+        b.slot_id,
+        b.booking_date,
+        b.start_time,
+        b.duration,
+        b.total_price,
+        pl.address,
+        pl.name AS location_name,
+        b.status
+      FROM bookings b
+      JOIN parking_locations pl ON pl.id = b.location_id
+      WHERE b.id = ?`,
       [bookingId]
     );
+
+
 
     if (booking.length === 0) {
       return res.status(404).json({ message: "Booking not found" });
@@ -398,6 +415,39 @@ exports.forceCancelBooking = async (req, res) => {
       [booking[0].slot_id]
     );
 
+    // Policy calculation
+    const now = new Date();
+    const bookingDateStr = booking[0].booking_date instanceof Date
+      ? booking[0].booking_date.toISOString().split("T")[0]
+      : booking[0].booking_date;
+
+    const startDateTime = new Date(`${bookingDateStr}T${booking[0].start_time}`);
+    const hoursLeft = (startDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    let refundAmount = 0;
+    if (hoursLeft >= 1) refundAmount = Number(booking[0].total_price);
+    else if (hoursLeft >= 0.5) refundAmount = Number(booking[0].total_price) * 0.5;
+
+    // Wallet refund credit (if refundAmount > 0)
+    if (refundAmount > 0) {
+      await db.promise().query(
+        "UPDATE users SET wallet = wallet + ? WHERE id = ?",
+        [refundAmount, booking[0].user_id]
+      );
+
+      await db.promise().query(
+        `INSERT INTO wallet_transactions
+         (user_id, booking_id, amount, type, description)
+         VALUES (?, ?, ?, 'credit', ?)` ,
+        [
+          booking[0].user_id,
+          bookingId,
+          refundAmount,
+          `Admin cancellation refund for ${booking[0].booking_code} (hoursLeft=${hoursLeft.toFixed(2)})`
+        ]
+      );
+    }
+
     // 3️⃣ Notification
     await db.promise().query(
       `INSERT INTO notifications 
@@ -406,11 +456,58 @@ exports.forceCancelBooking = async (req, res) => {
       [
         booking[0].user_id,
         bookingId,
-        `Your booking ${booking[0].booking_code} was cancelled by admin.`
+        `Your booking ${booking[0].booking_code} was cancelled by admin. Refund: ₹${refundAmount.toFixed(2).replace(/\.00$/, "")}`
       ]
     );
 
-    res.json({ message: "Booking force cancelled successfully" });
+    // Best-effort SMS
+    try {
+      const [userRows] = await db.promise().query(
+        "SELECT phone_number FROM users WHERE id = ?",
+        [booking[0].user_id]
+      );
+
+      const phone_number = userRows[0]?.phone_number;
+
+      const start_time_display = new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      }).format(startDateTime);
+
+      const endDate = new Date(startDateTime.getTime() + Number(booking[0].duration) * 60 * 60 * 1000);
+
+      const end_time_display = new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      }).format(endDate);
+
+      const { sendBookingCancelledSMS } = require("../utils/notificationHelper");
+
+      if (phone_number) {
+        await sendBookingCancelledSMS({
+          phone_number,
+          booking_code: booking[0].booking_code,
+          refund_amount: refundAmount,
+          slot_id: booking[0].slot_id,
+          location_address: booking[0].address ? booking[0].address : booking[0].location_name,
+          start_time_display,
+          end_time_display
+        });
+      }
+    } catch (smsErr) {
+      console.log("Admin cancellation SMS best-effort failed:", smsErr?.message || smsErr);
+    }
+
+    res.json({ message: "Booking force cancelled successfully", refund_amount: Number(refundAmount.toFixed(2)) });
+
 
   } catch (error) {
     console.log(error);
