@@ -101,19 +101,23 @@ CREATE TABLE IF NOT EXISTS favorites (
 CREATE TABLE IF NOT EXISTS ratings (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
+  booking_code VARCHAR(50) NOT NULL,
   location_id INT NOT NULL,
   rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
   review TEXT,
+  admin_reply TEXT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (location_id) REFERENCES parking_locations(id) ON DELETE CASCADE,
-  UNIQUE KEY unique_rating (user_id, location_id)
+  UNIQUE KEY unique_rating (user_id, booking_code)
 );
+
 
 -- ==========================================
 -- 8. NOTIFICATIONS TABLE
 -- ==========================================
 CREATE TABLE IF NOT EXISTS notifications (
+
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
   booking_id INT DEFAULT NULL,
@@ -126,8 +130,31 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 -- ==========================================
+-- SUPPORT TICKETS (Support/Help Center)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  ticket_code VARCHAR(50) NOT NULL UNIQUE,
+  user_id INT NOT NULL,
+  booking_id INT DEFAULT NULL,
+  subject VARCHAR(200) NOT NULL,
+  issue_type ENUM('Booking Issue','Refund Issue','Payment Issue','Slot/Parking Issue','Emergency Issue') NOT NULL,
+  message TEXT NOT NULL,
+  status ENUM('open','pending','resolved') DEFAULT 'open',
+  admin_reply TEXT DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE SET NULL,
+  INDEX idx_support_tickets_user (user_id),
+  INDEX idx_support_tickets_status (status),
+  INDEX idx_support_tickets_booking (booking_id)
+);
+
+-- ==========================================
 -- WALLET + REFUND SYSTEM (Wallet Transactions + Refund Requests)
 -- ==========================================
+
 
 -- Add wallet column to users
 ALTER TABLE users

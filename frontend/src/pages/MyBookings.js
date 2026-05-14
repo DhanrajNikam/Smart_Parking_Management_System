@@ -187,10 +187,13 @@
 
 
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 import Navbar from "../components/Navbar";
 
+
 function MyBookings() {
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [activeTab, setActiveTab] = useState("all");
   const [extendId, setExtendId] = useState(null);
@@ -378,7 +381,7 @@ function MyBookings() {
                           </div>
                         )}
 
-                        {b.status === "pending" && (
+                      {b.status === "pending" && (
                           <button
                             className="btn btn-danger btn-sm"
                             onClick={() => cancelBooking(b.id)}
@@ -387,10 +390,33 @@ function MyBookings() {
                           </button>
                         )}
 
-                        {(b.status === "completed" ||
-                          b.status === "cancelled") && (
-                          <span className="text-muted">-</span>
+                        {b.status === "active" ? null : b.status === "completed" ? (
+                          <button
+                            style={{
+                              background: "#f59e0b",
+                              color: "white",
+                              border: "none",
+                              padding: "8px 14px",
+                              borderRadius: "6px",
+                              cursor: "pointer"
+                            }}
+                            onClick={() =>
+                              navigate("/rating", {
+                                state: {
+                                  booking_code: b.booking_code
+
+                                }
+                              })
+                            }
+                          >
+                            ⭐ Rate
+                          </button>
+                        ) : (
+                          b.status === "cancelled" && (
+                            <span className="text-muted">-</span>
+                          )
                         )}
+
                       </td>
                     </tr>
                   );

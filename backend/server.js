@@ -95,6 +95,8 @@ const userRoutes = require("./routes/userRoutes");
 const ratingRoutes = require("./routes/ratingRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const walletRoutes = require("./routes/walletRoutes");
+const supportRoutes = require("./routes/supportRoutes");
+
 
 app.use("/api/auth", authRoutes);
 app.use("/api/parking", parkingRoutes);
@@ -106,9 +108,10 @@ app.use("/api/user", userRoutes);
 app.use("/api/ratings", ratingRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/wallet", walletRoutes);
-
+app.use("/api/support", supportRoutes);
 
 /* ================= ROOT ================= */
+
 
 app.get("/", (req, res) => {
   res.send("Smart Parking Backend Running");

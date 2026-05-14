@@ -11,10 +11,14 @@ import Payment from "./pages/Payment";
 import Confirmation from "./pages/Confirmation";
 import MyBookings from "./pages/MyBookings";
 import Notifications from "./pages/Notifications";
+import Rating from "./pages/Rating";
 
 import Wallet from "./pages/Wallet";
 import WalletHistory from "./pages/WalletHistory";
 import RefundRequest from "./pages/RefundRequest";
+
+import Support from "./pages/Support";
+import SupportCenter from "./pages/SupportCenter";
 
 import AdminDashboard from "./admin/AdminDashboard";
 import ManageParking from "./admin/ManageParking";
@@ -22,16 +26,29 @@ import Bookings from "./admin/Bookings";
 import Users from "./admin/Users";
 import Reports from "./admin/Reports";
 import RefundRequests from "./admin/RefundRequests";
+import AdminSupport from "./admin/AdminSupport";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<Login />} />
 
-        {/* User Routes */}
+        {/* ================= PUBLIC ================= */}
+
+        <Route path="/" element={<HomePage />} />
+
+        <Route
+          path="/login"
+          element={<Login />}
+        />
+
+        <Route
+          path="/support"
+          element={<Support />}
+        />
+
+        {/* ================= USER ROUTES ================= */}
+
         <Route
           path="/dashboard"
           element={
@@ -40,6 +57,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/map"
           element={
@@ -48,6 +66,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/slots/:locationId"
           element={
@@ -56,6 +75,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/booking/:slotId"
           element={
@@ -64,6 +84,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/payment/:bookingId"
           element={
@@ -72,6 +93,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/confirmation"
           element={
@@ -80,6 +102,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/mybookings"
           element={
@@ -88,6 +111,18 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* ⭐ RATING PAGE */}
+
+        <Route
+          path="/rating"
+          element={
+            <ProtectedRoute>
+              <Rating />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="/notifications"
           element={
@@ -97,7 +132,19 @@ function App() {
           }
         />
 
-        {/* Wallet Routes */}
+        {/* ================= SUPPORT ================= */}
+
+        <Route
+          path="/support-center"
+          element={
+            <ProtectedRoute>
+              <SupportCenter />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ================= WALLET ================= */}
+
         <Route
           path="/wallet"
           element={
@@ -106,6 +153,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/wallet/transactions"
           element={
@@ -114,6 +162,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/refund/request"
           element={
@@ -123,7 +172,8 @@ function App() {
           }
         />
 
-        {/* Admin Routes */}
+        {/* ================= ADMIN ROUTES ================= */}
+
         <Route
           path="/admin"
           element={
@@ -132,6 +182,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/admin/manage-parking"
           element={
@@ -140,6 +191,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/admin/bookings"
           element={
@@ -148,6 +200,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/admin/users"
           element={
@@ -156,6 +209,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/admin/reports"
           element={
@@ -164,6 +218,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/admin/refund-requests"
           element={
@@ -172,10 +227,19 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/admin/support-tickets"
+          element={
+            <ProtectedRoute adminOnly>
+              <AdminSupport />
+            </ProtectedRoute>
+          }
+        />
+
       </Routes>
     </BrowserRouter>
   );
 }
 
 export default App;
-

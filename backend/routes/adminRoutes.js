@@ -645,7 +645,10 @@ const {
   updateBookingStatus,
   getAdvancedFilteredBookings,
   exportBookingsExcel,
-  toggleUserStatus
+  toggleUserStatus,
+  getRatingsSummary,
+  getRecentReviews,
+  replyToReview
 
 } = require("../controllers/adminController");
 
@@ -913,6 +916,38 @@ router.put(
   verifyAdmin,
   toggleUserStatus
 );
+
+// =====================================
+// ⭐ Ratings Summary
+// =====================================
+router.get(
+  "/ratings-summary",
+  verifyToken,
+  verifyAdmin,
+  getRatingsSummary
+);
+
+// =====================================
+// ⭐ Recent Reviews
+// =====================================
+router.get(
+  "/recent-reviews",
+  verifyToken,
+  verifyAdmin,
+  getRecentReviews
+);
+
+// =====================================
+// 💬 Admin Reply to Review
+// =====================================
+router.put(
+  "/reply-review/:id",
+  verifyToken,
+  verifyAdmin,
+  replyToReview
+);
+
+
 
 
 // =====================================

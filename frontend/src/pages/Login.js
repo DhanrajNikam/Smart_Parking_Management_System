@@ -3,6 +3,7 @@ import API from "../services/api";
 import { useNavigate, Link } from "react-router-dom";
 
 function Login() {
+
   const navigate = useNavigate();
 
   const [isRegister, setIsRegister] = useState(false);
@@ -16,7 +17,6 @@ function Login() {
     phone_number: ""
   });
 
-
   const handleChange = (e) => {
     setForm({
       ...form,
@@ -25,29 +25,38 @@ function Login() {
   };
 
   const handleSubmit = async (e) => {
+
     e.preventDefault();
 
     try {
+
       if (isRegister) {
+
         await API.post("/auth/register", {
           name: form.name,
           email: form.email,
           password: form.password,
           role: form.role,
-          phone_number: form.phone_number
+          phone_number: `+91${form.phone_number}`
         });
 
-
         alert("Registration successful! Please login.");
+
         setIsRegister(false);
+
       } else {
+
         const res = await API.post("/auth/login", {
           email: form.email,
           password: form.password
         });
 
         localStorage.setItem("token", res.data.token);
-        localStorage.setItem("user", JSON.stringify(res.data.user));
+
+        localStorage.setItem(
+          "user",
+          JSON.stringify(res.data.user)
+        );
 
         alert("Login Successful");
 
@@ -57,12 +66,18 @@ function Login() {
           navigate("/dashboard");
         }
       }
+
     } catch (error) {
-      alert(error.response?.data?.message || "Operation failed");
+
+      alert(
+        error.response?.data?.message ||
+        "Operation failed"
+      );
     }
   };
 
   return (
+
     <div
       style={{
         minHeight: "100vh",
@@ -74,6 +89,7 @@ function Login() {
         padding: "20px"
       }}
     >
+
       <div
         className="card border-0 shadow-lg"
         style={{
@@ -83,7 +99,8 @@ function Login() {
           overflow: "hidden"
         }}
       >
-        {/* Top Header */}
+
+        {/* Header */}
 
         <div
           style={{
@@ -93,6 +110,7 @@ function Login() {
             textAlign: "center"
           }}
         >
+
           <h2 className="fw-bold mb-2">
             🚗 ParkSmart
           </h2>
@@ -100,30 +118,43 @@ function Login() {
           <p className="mb-0">
             Smart Parking Management System
           </p>
+
         </div>
 
-        {/* Form Section */}
+        {/* Form */}
 
         <div className="p-4">
 
           <h3 className="text-center fw-bold mb-4">
+
             {isRegister
               ? "Create Account"
               : isAdmin
               ? "Admin Login"
               : "User Login"}
+
           </h3>
 
           <div className="text-center mb-3">
-            <Link to="/" className="text-decoration-none fw-semibold" style={{ color: "#0d6efd" }}>
+
+            <Link
+              to="/"
+              className="text-decoration-none fw-semibold"
+              style={{ color: "#0d6efd" }}
+            >
               ← Back to Home
             </Link>
+
           </div>
 
           <form onSubmit={handleSubmit}>
 
+            {/* FULL NAME */}
+
             {isRegister && (
+
               <div className="mb-3">
+
                 <label className="fw-semibold">
                   Full Name
                 </label>
@@ -141,33 +172,61 @@ function Login() {
                     padding: "12px"
                   }}
                 />
+
               </div>
             )}
 
+            {/* MOBILE NUMBER */}
+
             {isRegister && (
+
               <div className="mb-3">
+
                 <label className="fw-semibold">
                   Mobile Number
                 </label>
 
-                <input
-                  type="text"
-                  name="phone_number"
-                  className="form-control"
-                  placeholder="Enter Mobile Number"
-                  value={form.phone_number}
-                  onChange={handleChange}
-                  required
-                  style={{
-                    borderRadius: "12px",
-                    padding: "12px"
-                  }}
-                />
+                <div className="input-group">
+
+                  <span
+                    className="input-group-text"
+                    style={{
+                      borderRadius: "12px 0 0 12px"
+                    }}
+                  >
+                    +91
+                  </span>
+
+                  <input
+                    type="tel"
+                    name="phone_number"
+                    className="form-control"
+                    placeholder="Enter Mobile Number"
+                    value={form.phone_number}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        phone_number: e.target.value
+                          .replace(/\D/g, "")
+                          .slice(0, 10)
+                      })
+                    }
+                    required
+                    style={{
+                      borderRadius: "0 12px 12px 0",
+                      padding: "12px"
+                    }}
+                  />
+
+                </div>
+
               </div>
             )}
 
+            {/* EMAIL */}
 
             <div className="mb-3">
+
               <label className="fw-semibold">
                 Email
               </label>
@@ -185,9 +244,13 @@ function Login() {
                   padding: "12px"
                 }}
               />
+
             </div>
 
+            {/* PASSWORD */}
+
             <div className="mb-3">
+
               <label className="fw-semibold">
                 Password
               </label>
@@ -205,10 +268,15 @@ function Login() {
                   padding: "12px"
                 }}
               />
+
             </div>
 
+            {/* ROLE */}
+
             {isRegister && (
+
               <div className="mb-4">
+
                 <label className="fw-semibold">
                   Role
                 </label>
@@ -223,6 +291,7 @@ function Login() {
                     padding: "12px"
                   }}
                 >
+
                   <option value="user">
                     User
                   </option>
@@ -230,9 +299,13 @@ function Login() {
                   <option value="admin">
                     Admin
                   </option>
+
                 </select>
+
               </div>
             )}
+
+            {/* BUTTON */}
 
             <button
               className="btn btn-primary w-100 fw-bold"
@@ -242,52 +315,71 @@ function Login() {
                 fontSize: "16px"
               }}
             >
-              {isRegister ? "Register" : "Login"}
+
+              {isRegister
+                ? "Register"
+                : "Login"}
+
             </button>
 
           </form>
 
-          {/* Bottom Actions */}
+          {/* Bottom */}
 
           <div className="text-center mt-4">
 
             {!isRegister ? (
+
               <>
+
                 <p className="mb-2">
+
                   Don’t have an account?{" "}
+
                   <button
                     className="btn btn-link p-0 fw-bold"
                     onClick={() => setIsRegister(true)}
                   >
                     Register
                   </button>
+
                 </p>
 
                 <button
                   className="btn btn-link text-muted p-0"
                   onClick={() => setIsAdmin(!isAdmin)}
                 >
+
                   {isAdmin
                     ? "Switch to User Login"
                     : "Admin Login"}
+
                 </button>
+
               </>
+
             ) : (
+
               <p className="mb-0">
+
                 Already have an account?{" "}
+
                 <button
                   className="btn btn-link p-0 fw-bold"
                   onClick={() => setIsRegister(false)}
                 >
                   Login
                 </button>
+
               </p>
             )}
 
           </div>
 
         </div>
+
       </div>
+
     </div>
   );
 }

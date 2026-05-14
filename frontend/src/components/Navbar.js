@@ -68,6 +68,10 @@ function Navbar() {
                   Wallet
                 </Link>
 
+                <Link className="btn btn-outline-light btn-sm" to="/support-center">
+                  Support
+                </Link>
+
                 <Link
                   className="btn btn-outline-light btn-sm position-relative"
                   to="/notifications"
@@ -104,6 +108,12 @@ function Navbar() {
                 </Link>
                 <Link className="btn btn-outline-light btn-sm" to="/admin/refund-requests">
                   Refund Requests
+                </Link>
+                <Link
+                  className="btn btn-outline-light btn-sm"
+                  to="/admin/support-tickets"
+                >
+                  Support Tickets
                 </Link>
 
               </>

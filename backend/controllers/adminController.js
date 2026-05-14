@@ -882,6 +882,80 @@ exports.exportBookingsExcel = async (req, res) => {
   }
 };
 
+// ⭐ Get Ratings Summary for Admin Dashboard
+// GET /api/admin/ratings-summary
+exports.getRatingsSummary = async (req, res) => {
+  try {
+    const [[result]] = await db.promise().query(
+      `SELECT
+        ROUND(AVG(rating),1) AS average_rating,
+        COUNT(*) AS total_reviews
+       FROM ratings;`
+    );
+
+    res.json(result || { average_rating: 0, total_reviews: 0 });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ✅ Recent Reviews for Admin Dashboard
+// GET /api/admin/recent-reviews
+exports.getRecentReviews = async (req, res) => {
+  try {
+    const [rows] = await db.promise().query(
+      `SELECT
+        r.id,
+        u.name AS user_name,
+        p.name AS parking_name,
+        r.rating,
+        r.review,
+        r.admin_reply,
+        r.created_at
+      FROM ratings r
+      JOIN users u ON r.user_id = u.id
+      JOIN parking_locations p ON r.location_id = p.id
+      ORDER BY r.created_at DESC;`
+    );
+
+    res.json(rows);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ✅ Admin Reply to a Rating
+// PUT /api/admin/reply-review/:id
+exports.replyToReview = async (req, res) => {
+  const { id } = req.params;
+  const { admin_reply } = req.body;
+
+  try {
+    if (admin_reply === undefined) {
+      return res.status(400).json({ message: "admin_reply is required" });
+    }
+
+    const [result] = await db.promise().query(
+      `UPDATE ratings
+       SET admin_reply = ?
+       WHERE id = ?;`,
+      [admin_reply, id]
+    );
+
+    // mysql2 returns an OK packet; affectedRows exists there
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Review not found" });
+    }
+
+    res.json({ message: "Admin reply saved successfully" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 exports.toggleUserStatus = async (req, res) => {
   const userId = req.params.id;
   const { is_active } = req.body;

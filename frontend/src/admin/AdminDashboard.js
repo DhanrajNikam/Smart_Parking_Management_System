@@ -34,13 +34,29 @@ function AdminDashboard() {
   const [monthlyRevenue, setMonthlyRevenue] = useState([]);
   const [dailyTrend, setDailyTrend] = useState([]);
   const [vehicleAnalytics, setVehicleAnalytics] = useState([]);
+  const [ratingsSummary, setRatingsSummary] = useState({});
+  const [reviews, setReviews] = useState([]);
+  const [replyDrafts, setReplyDrafts] = useState({});
+
 
   useEffect(() => {
     fetchStats();
     fetchMonthlyRevenue();
     fetchDailyTrend();
     fetchVehicleAnalytics();
+    fetchRatingsSummary();
+    fetchRecentReviews();
   }, []);
+
+  const fetchRecentReviews = async () => {
+    try {
+      const res = await API.get("/admin/recent-reviews");
+      setReviews(res.data);
+    } catch (error) {
+      console.log("Recent reviews error:", error);
+    }
+  };
+
 
   const fetchStats = async () => {
     try {
@@ -75,6 +91,15 @@ function AdminDashboard() {
       setVehicleAnalytics(res.data);
     } catch (error) {
       console.log("Vehicle error:", error);
+    }
+  };
+
+  const fetchRatingsSummary = async () => {
+    try {
+      const res = await API.get("/admin/ratings-summary");
+      setRatingsSummary(res.data);
+    } catch (error) {
+      console.log("Ratings summary error:", error);
     }
   };
 
@@ -130,6 +155,38 @@ function AdminDashboard() {
     { label: "Top Location", value: stats.top_location || "N/A", color: "primary" },
   ];
 
+  const renderStars = (rating) => {
+    const r = Number(rating) || 0;
+    const count = Math.max(0, Math.min(5, r));
+    return "⭐".repeat(count);
+  };
+
+  const handleReplyChange = (reviewId, value) => {
+    setReplyDrafts((prev) => ({ ...prev, [reviewId]: value }));
+  };
+
+  const handleSendReply = async (reviewId) => {
+    try {
+      const admin_reply = replyDrafts[reviewId] || "";
+      await API.put(`/admin/reply-review/${reviewId}`, { admin_reply });
+
+      setReviews((prev) =>
+        prev.map((r) =>
+          r.id === reviewId ? { ...r, admin_reply: admin_reply } : r
+        )
+      );
+
+      setReplyDrafts((prev) => {
+        const next = { ...prev };
+        delete next[reviewId];
+        return next;
+      });
+    } catch (error) {
+      console.log("Reply error:", error);
+    }
+  };
+
+
   return (
     <div>
       <Navbar />
@@ -148,6 +205,26 @@ function AdminDashboard() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Ratings Analytics Cards */}
+        <div className="row mt-2">
+          <div className="col-md-6 mb-3">
+            <div className={`card text-white bg-warning shadow`}>
+              <div className="card-body text-center">
+                <h6>⭐ Average Rating</h6>
+                <h3>{ratingsSummary.average_rating ?? 0}</h3>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-6 mb-3">
+            <div className={`card text-white bg-info shadow`}>
+              <div className="card-body text-center">
+                <h6>📝 Total Reviews</h6>
+                <h3>{ratingsSummary.total_reviews ?? 0}</h3>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Charts */}
@@ -193,10 +270,89 @@ function AdminDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Recent Reviews */}
+        <div className="row mt-4">
+          <div className="col-12">
+            <div className="card shadow p-3">
+              <h5 className="mb-3">Recent Reviews</h5>
+
+              <div className="table-responsive">
+                <table className="table table-hover align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Parking</th>
+                      <th>Rating</th>
+                      <th>Review</th>
+                      <th>Admin Reply</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reviews.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="text-center text-muted">
+                          No reviews found.
+                        </td>
+                      </tr>
+                    ) : (
+                      reviews.map((r) => {
+                        const draft = replyDrafts[r.id] ?? "";
+                        const hasReply = r.admin_reply !== null && r.admin_reply !== undefined && String(r.admin_reply).trim() !== "";
+
+                        return (
+                          <tr key={r.id}>
+                            <td style={{ minWidth: 140 }}>{r.user_name}</td>
+                            <td style={{ minWidth: 160 }}>{r.parking_name}</td>
+                            <td style={{ minWidth: 100 }}>
+                              <span>{renderStars(r.rating)}</span>
+                            </td>
+                            <td style={{ maxWidth: 260, whiteSpace: "normal" }}>
+                              {r.review}
+                            </td>
+                            <td style={{ maxWidth: 260, whiteSpace: "normal" }}>
+                              {hasReply ? (
+                                <span>{r.admin_reply}</span>
+                              ) : (
+                                <textarea
+                                  className="form-control"
+                                  rows={2}
+                                  value={draft}
+                                  placeholder="Write a reply..."
+                                  onChange={(e) => handleReplyChange(r.id, e.target.value)}
+                                />
+                              )}
+                            </td>
+                            <td style={{ minWidth: 140 }}>
+                              {hasReply ? (
+                                <span className="text-success">Replied ✅</span>
+                              ) : (
+                                <button
+                                  className="btn btn-primary btn-sm"
+                                  onClick={() => handleSendReply(r.id)}
+                                  disabled={String(replyDrafts[r.id] ?? "").trim().length === 0}
+                                >
+                                  Send Reply
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );
 }
+
 
 export default AdminDashboard;
 
