@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import API from "../services/api";
 import Navbar from "../components/Navbar";
+import ReviewRatingCard from "../components/ReviewRatingCard";
+import RatingSummary from "../components/RatingSummary";
 
 function SlotSelection() {
   const { locationId } = useParams();
@@ -10,8 +12,15 @@ function SlotSelection() {
   const [slots, setSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
 
+  const [reviewsPayload, setReviewsPayload] = useState({
+    average_rating: 0,
+    total_reviews: 0,
+    reviews: []
+  });
+
   useEffect(() => {
     fetchSlots();
+    fetchLocationReviews();
   }, [locationId]);
 
   const fetchSlots = async () => {
@@ -22,6 +31,16 @@ function SlotSelection() {
       console.log("Slot Fetch Error:", error);
     }
   };
+
+  const fetchLocationReviews = async () => {
+    try {
+      const res = await API.get(`/parking/${locationId}/reviews`);
+      setReviewsPayload(res.data || { reviews: [] });
+    } catch (error) {
+      console.log("Reviews Fetch Error:", error);
+    }
+  };
+
 
   const handleBook = (slotId) => {
     navigate(`/booking/${slotId}?location=${locationId}`);
@@ -56,69 +75,54 @@ function SlotSelection() {
     <div>
       <Navbar />
       <div className="container mt-4">
-        <h2>Select Parking Slot</h2>
-        <p className="text-muted">Click a green slot to book it instantly</p>
+        <h2 className="sp-title">Select Parking Slot</h2>
+        <p className="text-muted mb-3">Click an available slot to book it instantly</p>
 
-        {/* Legend */}
-        <div className="d-flex gap-4 mt-3 mb-3 flex-wrap">
-          <span className="badge bg-success">🟢 Available — Click to Book</span>
-          <span className="badge bg-danger">🔴 Occupied — Already Booked</span>
-          <span className="badge bg-warning text-dark">🟡 Reserved</span>
+        {/* LEGEND */}
+        <div className="sp-legend mb-3" aria-label="Slot status legend">
+          <span className="sp-pill available">🟢 Available — Click to Book</span>
+          <span className="sp-pill occupied">🔴 Occupied — Already Booked</span>
+          <span className="sp-pill reserved">🟡 Reserved — Starting Soon</span>
         </div>
 
-        {/* Slot Grid */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-            gap: "16px",
-          }}
-        >
+        {/* SLOT GRID (primary action) */}
+        <div className="sp-slot-grid mb-4">
           {slots.map((slot) => {
             const status = slot.display_status || slot.status;
             const isAvailable = status === "available";
             const isOccupied = status === "occupied";
+            const isReserved = status === "reserved";
 
             return (
               <div
                 key={slot.id}
-                className="card text-white"
-                style={{
-                  backgroundColor: getSlotColor(status),
-                  border: getSlotBorder(status),
-                  cursor: isAvailable ? "pointer" : "default",
-                  transition: "transform 0.15s ease",
-                }}
-                onMouseEnter={(e) => {
-                  if (isAvailable) e.currentTarget.style.transform = "scale(1.03)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "scale(1)";
-                }}
+                className="sp-slot-card"
+                style={{ backgroundColor: getSlotColor(status), border: getSlotBorder(status) }}
+                onClick={() => handleSlotClick(slot)}
               >
-                <div className="card-body text-center p-3">
-                  <h4 className="mb-1 fw-bold">{slot.slot_number}</h4>
-                  <small className="text-uppercase d-block mb-2">
-                    {status}
-                  </small>
+                <div className="sp-slot-inner">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <div className="sp-slot-number">{slot.slot_number}</div>
+                    <div className="sp-slot-chip">
+                      {isAvailable ? "AVAILABLE" : isOccupied ? "OCCUPIED" : "RESERVED"}
+                    </div>
+                  </div>
 
-                  {/* Occupied Info */}
                   {isOccupied && slot.active_booking_code && (
-                    <div
-                      className="bg-dark bg-opacity-25 rounded p-1 mb-2"
-                      style={{ fontSize: "0.7rem" }}
-                    >
-                      <div>🚗 {slot.active_vehicle_type}</div>
-                      <div>{slot.active_vehicle_number}</div>
-                      <div>⏰ {slot.active_start_time} ({slot.active_duration}h)</div>
+                    <div style={{ background: "rgba(0,0,0,0.18)", borderRadius: 12, padding: 8 }}>
+                      <div style={{ fontWeight: 900, fontSize: 12 }}>🚗 {slot.active_vehicle_type}</div>
+                      <div style={{ fontSize: 12, opacity: 0.95, fontWeight: 800 }}>{slot.active_vehicle_number}</div>
+                      <div style={{ fontSize: 12, opacity: 0.95, fontWeight: 800 }}>
+                        ⏰ {slot.active_start_time} ({slot.active_duration}h)
+                      </div>
                     </div>
                   )}
 
-                  {/* Action Button */}
+                  {isReserved && <div style={{ fontWeight: 900, fontSize: 13, marginTop: 2 }}>⏳ Starting Soon</div>}
+
                   {isAvailable ? (
                     <button
-                      className="btn btn-light btn-sm fw-bold w-100"
-                      style={{ color: "#1e7e34" }}
+                      className="sp-slot-btn available"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleBook(slot.id);
@@ -128,11 +132,11 @@ function SlotSelection() {
                     </button>
                   ) : (
                     <button
-                      className="btn btn-outline-light btn-sm w-100"
+                      className={`sp-slot-btn ${isOccupied ? "occupied" : "reserved"}`}
                       disabled
-                      style={{ opacity: 0.6 }}
+                      style={{ opacity: isOccupied ? 0.75 : 0.9 }}
                     >
-                      {isOccupied ? "❌ Occupied" : "Reserved"}
+                      {isOccupied ? "❌ OCCUPIED" : "🟡 RESERVED"}
                     </button>
                   )}
                 </div>
@@ -141,7 +145,77 @@ function SlotSelection() {
           })}
         </div>
 
-        {/* Occupied Slot Detail Panel */}
+        {/* PARKING INFORMATION (below slots) */}
+        <div className="sp-summary-card p-4 mb-4">
+          <div className="sp-summary-grid">
+            <div className="sp-summary-left">
+              <div className="sp-summary-head">
+                <div className="sp-summary-paragraph" style={{ fontSize: 12 }}>
+                  Parking Info
+                </div>
+                <div style={{ fontWeight: 950, fontSize: 22, letterSpacing: "-0.02em" }}>
+                  {slots?.[0]?.parking_name || slots?.[0]?.location_name || "CBS Parking"}
+                </div>
+                <div style={{ color: "#475569", fontWeight: 700, marginTop: 2 }}>
+                  📍 {slots?.[0]?.address || slots?.[0]?.location_address || "Mahatma Nagar, Nashik"}
+                </div>
+                <div className="text-muted" style={{ fontWeight: 800, marginTop: 2 }}>
+                  📍 {slots?.[0]?.distance_km || "8.9"} km away
+                </div>
+              </div>
+            </div>
+
+            <div className="sp-summary-right">
+              <div className="sp-metric">
+                <div className="sp-metric-icon">⭐</div>
+                <div>
+                  <div className="sp-metric-label">Average Rating</div>
+                  <div className="sp-metric-value">{Number(reviewsPayload?.average_rating || 0).toFixed(1)}</div>
+                </div>
+              </div>
+
+              <div className="sp-metric">
+                <div className="sp-metric-icon">📝</div>
+                <div>
+                  <div className="sp-metric-label">Total Reviews</div>
+                  <div className="sp-metric-value">{reviewsPayload?.total_reviews || 0}</div>
+                </div>
+              </div>
+
+              <div className="sp-metric">
+                <div className="sp-metric-icon">🅿️</div>
+                <div>
+                  <div className="sp-metric-label">Available Slots</div>
+                  <div className="sp-metric-value">{slots.filter((s) => (s.display_status || s.status) === "available").length}</div>
+                </div>
+              </div>
+
+              <div className="sp-metric">
+                <div className="sp-metric-icon">💰</div>
+                <div>
+                  <div className="sp-metric-label">Price per hour</div>
+                  <div className="sp-metric-value">₹{slots?.[0]?.price_per_hour || 50}/hr</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* REVIEWS */}
+        <div className="mt-4">
+          <h4 className="fw-bold mb-3">Recent Reviews</h4>
+          {reviewsPayload?.reviews?.length ? (
+            <div className="sp-review-grid">
+              {reviewsPayload.reviews.map((r) => (
+                <ReviewRatingCard key={r.id} review={r} />
+              ))}
+            </div>
+          ) : (
+            <div className="alert alert-light shadow-sm">No reviews yet</div>
+          )}
+        </div>
+
+        {/* Occupied Slot Detail Panel (unchanged) */}
         {selectedSlot && (selectedSlot.display_status || selectedSlot.status) === "occupied" && (
           <div className="mt-4">
             <div className="alert alert-danger">
@@ -167,10 +241,7 @@ function SlotSelection() {
               ) : (
                 <p className="mb-0">This slot is currently unavailable.</p>
               )}
-              <button
-                className="btn btn-sm btn-outline-dark mt-2"
-                onClick={() => setSelectedSlot(null)}
-              >
+              <button className="btn btn-sm btn-outline-dark mt-2" onClick={() => setSelectedSlot(null)}>
                 Close
               </button>
             </div>

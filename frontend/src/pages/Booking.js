@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import API from "../services/api";
 import Navbar from "../components/Navbar";
+import AnprUploadCard from "./AnprUploadCard";
+
 
 function Booking() {
   const { slotId } = useParams();
@@ -128,6 +130,20 @@ function Booking() {
                     required
                   />
                 </div>
+
+                <div className="mb-3">
+                  <AnprUploadCard
+                    onExtract={(extracted) => {
+                      if (extracted) {
+                        setForm((prev) => ({
+                          ...prev,
+                          vehicle_number: extracted
+                        }));
+                      }
+                    }}
+                  />
+                </div>
+
 
                 <div className="mb-3">
                   <label>Booking Date</label>

@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 import Navbar from "../components/Navbar";
+import ReviewRatingCard from "../components/ReviewRatingCard";
 
 function Dashboard() {
+
   const navigate = useNavigate();
 
   const [data, setData] = useState({
@@ -36,11 +38,28 @@ function Dashboard() {
   const fetchFavorites = async () => {
     try {
       const res = await API.get("/favorites/my");
-      setFavorites(res.data);
+
+      // Expected: favorites array from backend.
+      // We also try to enrich each favorite with rating summary.
+      const favs = res.data || [];
+
+      const enriched = await Promise.all(
+        favs.map(async (f) => {
+          try {
+            const reviewRes = await API.get(`/parking/${f.id}/reviews`);
+            return { ...f, ...(reviewRes.data || {}) };
+          } catch (e) {
+            return f;
+          }
+        })
+      );
+
+      setFavorites(enriched);
     } catch (error) {
       console.log("Favorites error:", error);
     }
   };
+
 
   const fetchNearestParking = () => {
     setLoadingNearest(true);
@@ -258,27 +277,26 @@ function Dashboard() {
                 <div className="col-md-4" key={fav.id}>
                   <div
                     className="card border-0 shadow-sm h-100"
-                    style={{
-                      borderRadius: "18px"
-                    }}
+                    style={{ borderRadius: "18px" }}
                   >
                     <div className="card-body p-4">
-                      <h5 className="fw-bold">
-                        {fav.name}
-                      </h5>
+                      <h5 className="fw-bold">{fav.name}</h5>
+                      <p className="text-muted">{fav.address}</p>
 
-                      <p className="text-muted">
-                        {fav.address}
-                      </p>
+                      <div className="d-flex align-items-center gap-2 mb-2">
+                        <span style={{ color: "#fbbf24" }}>⭐</span>
+                        <span style={{ fontWeight: 800 }}>
+                          {fav.average_rating ?? "-"}
+                        </span>
+                        <span style={{ color: "#64748b", fontWeight: 600 }}>
+                          ({fav.total_reviews ?? 0} reviews)
+                        </span>
+                      </div>
 
                       <button
                         className="btn btn-outline-primary"
-                        style={{
-                          borderRadius: "12px"
-                        }}
-                        onClick={() =>
-                          navigate(`/slots/${fav.id}`)
-                        }
+                        style={{ borderRadius: "12px" }}
+                        onClick={() => navigate(`/slots/${fav.id}`)}
                       >
                         View Slots
                       </button>
@@ -288,6 +306,7 @@ function Dashboard() {
               ))}
             </div>
           )}
+
         </div>
 
       </div>

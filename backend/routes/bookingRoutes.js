@@ -11,6 +11,7 @@ const {
 const { verifyToken } = require("../middleware/authMiddleware");
 
 router.post("/create", verifyToken, createBooking);
+
 router.put("/cancel/:id", verifyToken, cancelBooking);
 router.put("/extend/:id", verifyToken, extendBooking);
 router.get("/my", verifyToken, getUserBookings);

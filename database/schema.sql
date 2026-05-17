@@ -130,6 +130,22 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 -- ==========================================
+-- 8.1 PASSWORD RESET TOKENS TABLE
+-- ==========================================
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  token VARCHAR(128) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  used BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_password_reset_tokens_user (user_id),
+  INDEX idx_password_reset_tokens_token (token),
+  INDEX idx_password_reset_tokens_expires (expires_at)
+);
+
+-- ==========================================
 -- SUPPORT TICKETS (Support/Help Center)
 -- ==========================================
 CREATE TABLE IF NOT EXISTS support_tickets (
@@ -150,6 +166,7 @@ CREATE TABLE IF NOT EXISTS support_tickets (
   INDEX idx_support_tickets_status (status),
   INDEX idx_support_tickets_booking (booking_id)
 );
+
 
 -- ==========================================
 -- WALLET + REFUND SYSTEM (Wallet Transactions + Refund Requests)
@@ -218,4 +235,26 @@ INSERT IGNORE INTO slots (id, location_id, slot_number, status) VALUES
 (7, 2, 'A1', 'available'), (8, 2, 'A2', 'available'), (9, 2, 'A3', 'available'),
 (10, 2, 'B1', 'occupied'), (11, 2, 'B2', 'available'), (12, 3, 'A1', 'available'),
 (13, 3, 'A2', 'available'), (14, 3, 'A3', 'available'), (15, 3, 'B1', 'available');
+
+-- ==========================================
+-- 9. BOOKING QR CODES (ENTRY/EXIT)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS booking_qr_codes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  booking_id INT NOT NULL,
+  qr_value TEXT NOT NULL,
+  qr_token VARCHAR(128) NOT NULL,
+  qr_payload_json JSON NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  status ENUM('active','used','expired') DEFAULT 'active',
+  last_mode ENUM('entry','exit') DEFAULT NULL,
+  used_at DATETIME NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+  INDEX idx_booking_qr_booking (booking_id),
+  INDEX idx_booking_qr_token_hash (token_hash),
+  INDEX idx_booking_qr_expires (expires_at)
+);
+
 

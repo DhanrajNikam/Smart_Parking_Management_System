@@ -147,7 +147,18 @@ function Login() {
 
           </div>
 
+          <div className="text-center mb-2">
+            <Link
+              to="/forgot-password"
+              className="btn btn-link p-0 fw-semibold text-decoration-none"
+              style={{ color: "#0d6efd" }}
+            >
+              Forgot Password?
+            </Link>
+          </div>
+
           <form onSubmit={handleSubmit}>
+
 
             {/* FULL NAME */}
 

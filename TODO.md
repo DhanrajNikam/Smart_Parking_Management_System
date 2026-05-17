@@ -1,13 +1,20 @@
-# TODO - Recent Reviews + Admin Reply (Smart Parking Admin Dashboard)
+# TODO - Smart Parking OCR + QR Fixes
 
-## Steps
-- [x] Update database schema: add `admin_reply TEXT NULL` column to `ratings` table
-- [x] Backend: add `getRecentReviews` and `replyToReview` controllers in `backend/controllers/adminController.js`
-- [x] Backend: add routes in `backend/routes/adminRoutes.js` for `/recent-reviews` and `/reply-review/:id`
-- [x] Frontend: update `frontend/src/admin/AdminDashboard.js`
-  - fetch recent reviews
-  - render Recent Reviews section + stars
-  - add textarea + submit for admin reply
-  - show existing reply after update
-- [x] Testing: restart backend + frontend and verify UI/API behavior
+- [ ] Update `backend/controllers/anprController.js`
+  - [ ] Add required RAW/CLEANED OCR logs
+  - [ ] Improve OCR cleanup and plate extraction using robust regex
+  - [ ] Return exact failure message when OCR fails
+- [ ] Update `frontend/src/pages/AnprUploadCard.js`
+  - [ ] Clean OCR before regex match
+  - [ ] Use required robust plate regex
+  - [ ] Show required manual-entry failure message
+- [ ] Update `backend/controllers/qrController.js`
+  - [ ] Generate QR Base64 PNG using `qrcode` package
+  - [ ] Return `qr_code` expected by frontend
+  - [ ] Add error logs if generation fails
+- [ ] Update `frontend/src/pages/Confirmation.js`
+  - [ ] Ensure it renders QR from `res.data.qr_code`
+- [ ] Test both flows
+  - [ ] OCR: upload plate image -> vehicle number auto-filled
+  - [ ] QR: book -> confirmation page shows QR image
 

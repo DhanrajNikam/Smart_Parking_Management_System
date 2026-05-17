@@ -5,7 +5,12 @@ const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
 const cron = require("node-cron");
+
 const db = require("./config/db");
+
+const {
+  checkAndNotifyAvailability
+} = require("./controllers/parkingAvailabilityController");
 
 const app = express();
 
@@ -13,16 +18,15 @@ const app = express();
 ==================================================
 AUTO COMPLETE BOOKING CRON
 ==================================================
-Runs every 1 minute
-==================================================
 */
 
 cron.schedule("* * * * *", async () => {
+
   try {
 
     console.log("[Cron] Checking expired bookings...");
 
-    // ✅ COMPLETE EXPIRED BOOKINGS
+    // COMPLETE EXPIRED BOOKINGS
     const [result] = await db.promise().query(`
       UPDATE bookings
       SET status = 'completed'
@@ -37,7 +41,7 @@ cron.schedule("* * * * *", async () => {
       `[Cron] Completed bookings: ${result.affectedRows}`
     );
 
-    // ✅ FREE COMPLETED BOOKING SLOTS
+    // FREE COMPLETED SLOT
     await db.promise().query(`
       UPDATE slots s
       JOIN bookings b
@@ -49,11 +53,49 @@ cron.schedule("* * * * *", async () => {
     console.log("[Cron] Slots updated");
 
   } catch (error) {
+
     console.log("[Cron Error]", error);
+
   }
+
 });
 
 console.log("Reminder Cron Started...");
+
+/*
+==================================================
+PARKING FULL NOTIFY CRON
+==================================================
+*/
+
+cron.schedule("*/1 * * * *", async () => {
+
+  try {
+
+    await checkAndNotifyAvailability(
+      { body: {} },
+      {
+        status: () => ({
+          json: () => {}
+        }),
+        json: () => {}
+      }
+    );
+
+    console.log(
+      "[Cron] Parking full notify scan completed"
+    );
+
+  } catch (e) {
+
+    console.log(
+      "[Cron] Parking notify scan error:",
+      e
+    );
+
+  }
+
+});
 
 /* ================= HTTP SERVER ================= */
 
@@ -71,16 +113,27 @@ const io = new Server(server, {
 app.set("io", io);
 
 io.on("connection", (socket) => {
-  console.log("Client Connected:", socket.id);
+
+  console.log(
+    "Client Connected:",
+    socket.id
+  );
 
   socket.on("disconnect", () => {
-    console.log("Client Disconnected:", socket.id);
+
+    console.log(
+      "Client Disconnected:",
+      socket.id
+    );
+
   });
+
 });
 
 /* ================= MIDDLEWARE ================= */
 
 app.use(cors());
+
 app.use(express.json());
 
 /* ================= ROUTES ================= */
@@ -97,42 +150,89 @@ const adminRoutes = require("./routes/adminRoutes");
 const walletRoutes = require("./routes/walletRoutes");
 const supportRoutes = require("./routes/supportRoutes");
 
+const parkingAvailabilityRoutes = require(
+  "./routes/parkingAvailabilityRoutes"
+);
+
+const qrRoutes = require("./routes/qrRoutes");
+
+const anprRoutes = require("./routes/anprRoutes");
+
+/* ================= API ROUTES ================= */
 
 app.use("/api/auth", authRoutes);
+
 app.use("/api/parking", parkingRoutes);
+
 app.use("/api/bookings", bookingRoutes);
+
 app.use("/api/payments", paymentRoutes);
+
 app.use("/api/favorites", favoriteRoutes);
+
 app.use("/api/notifications", notificationRoutes);
+
 app.use("/api/user", userRoutes);
+
 app.use("/api/ratings", ratingRoutes);
+
 app.use("/api/admin", adminRoutes);
+
 app.use("/api/wallet", walletRoutes);
+
 app.use("/api/support", supportRoutes);
+
+// PARKING AVAILABILITY
+app.use(
+  "/api/parking-availability",
+  parkingAvailabilityRoutes
+);
+
+// QR ROUTES
+app.use(
+  "/api/qr",
+  qrRoutes
+);
+
+// ANPR ROUTES
+app.use(
+  "/api/anpr",
+  anprRoutes
+);
 
 /* ================= ROOT ================= */
 
-
 app.get("/", (req, res) => {
-  res.send("Smart Parking Backend Running");
+
+  res.send(
+    "Smart Parking Backend Running"
+  );
+
 });
 
 /* ================= 404 ================= */
 
 app.use((req, res) => {
+
   res.status(404).json({
     message: "Route Not Found"
   });
+
 });
 
 /* ================= GLOBAL ERROR ================= */
 
 app.use((err, req, res, next) => {
-  console.error("Server Error:", err.stack);
+
+  console.error(
+    "Server Error:",
+    err.stack
+  );
 
   res.status(500).json({
     message: "Internal Server Error"
   });
+
 });
 
 /* ================= START SERVER ================= */
@@ -140,5 +240,9 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+
+  console.log(
+    `Server running on port ${PORT}`
+  );
+
 });

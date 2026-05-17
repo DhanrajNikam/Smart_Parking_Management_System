@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import HomePage from "./pages/HomePage";
 import Dashboard from "./pages/Dashboard";
 import MapView from "./pages/MapView";
@@ -27,6 +29,7 @@ import Users from "./admin/Users";
 import Reports from "./admin/Reports";
 import RefundRequests from "./admin/RefundRequests";
 import AdminSupport from "./admin/AdminSupport";
+import GuardScanner from "./pages/GuardScanner";
 
 function App() {
   return (
@@ -41,6 +44,17 @@ function App() {
           path="/login"
           element={<Login />}
         />
+
+        <Route
+          path="/forgot-password"
+          element={<ForgotPassword />}
+        />
+
+        <Route
+          path="/reset-password/:token"
+          element={<ResetPassword />}
+        />
+
 
         <Route
           path="/support"
@@ -142,6 +156,9 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route path="/guard-scanner" element={<GuardScanner />} />
+
 
         {/* ================= WALLET ================= */}
 
