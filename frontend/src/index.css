@@ -1,11 +1,14 @@
+@import "./styles/designSystem.css";
+@import "./styles/fonts.css";
+@import "./styles/tableDesignSystem.css";
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: Inter, Poppins, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
@@ -30,6 +33,28 @@ code {
     height: 420px !important;
   }
 }
+
+/* Mobile nav polish */
+@media (max-width: 768px) {
+  .navbar-nav {
+    margin-top: 10px;
+  }
+}
+
+/* Navbar premium active link (used by Navbar.jsx) */
+.ps-navlink {
+  position: relative;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  transition: transform var(--ps-trans), box-shadow var(--ps-trans), background var(--ps-trans);
+}
+
+.ps-navlink.active {
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 6px rgba(6, 182, 212, 0.16);
+}
+
+
 
 /* Better typography scaling for smaller screens */
 h1,

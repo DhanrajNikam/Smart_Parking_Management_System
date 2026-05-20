@@ -1,10 +1,11 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import API from "../services/api";
 
 function Navbar() {
 
   const navigate = useNavigate();
+
 
   const user = JSON.parse(
     localStorage.getItem("user") || "{}"
@@ -59,10 +60,10 @@ function Navbar() {
   };
 
   return (
+    <nav className="ps-glass ps-navbar-outer sticky-top" aria-label="Primary">
 
-    <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
 
-      <div className="container">
+      <div className="container ps-navbar-inner">
 
         {/* ================= LOGO ================= */}
 
@@ -107,12 +108,15 @@ function Navbar() {
             {user.role !== "admin" && (
               <>
 
-                <Link
-                  className="btn btn-outline-light btn-sm"
+                <NavLink
+                  className={({ isActive }) =>
+                    `btn btn-outline-light btn-sm ps-navlink ${isActive ? "active" : ""}`
+                  }
                   to="/dashboard"
                 >
                   Dashboard
-                </Link>
+                </NavLink>
+
 
                 <Link
                   className="btn btn-outline-light btn-sm"

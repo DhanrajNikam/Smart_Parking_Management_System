@@ -37,4 +37,3 @@ async function sendSMS(to, body) {
 module.exports = {
   sendSMS
 };
-

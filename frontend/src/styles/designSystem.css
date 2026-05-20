@@ -1,0 +1,295 @@
+/* Premium Smart Parking UI Design System */
+
+/* ================= ROOT ================= */
+
+:root {
+  --ps-primary: #2563eb;
+  --ps-secondary: #06b6d4;
+  --ps-dark: #0f172a;
+  --ps-light: #f8fafc;
+  --ps-white: #ffffff;
+  --ps-border: rgba(255,255,255,0.12);
+
+  --ps-gradient:
+    linear-gradient(135deg, #2563eb 0%, #06b6d4 100%);
+
+  --ps-shadow:
+    0 10px 30px rgba(0,0,0,0.15);
+
+  --ps-radius: 18px;
+}
+
+/* ================= BODY ================= */
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #f1f5f9;
+  font-family: Inter, Poppins, sans-serif;
+  color: #111827;
+}
+
+/* ================= NAVBAR ================= */
+
+.ps-navbar-outer {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+
+  background: rgba(15, 23, 42, 0.94);
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+
+  padding: 12px 0;
+}
+
+.ps-navbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* LOGO */
+
+.navbar-brand {
+  color: white !important;
+  font-size: 1.6rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+/* NAVBAR COLLAPSE */
+
+#parkSmartNavbar {
+  display: flex !important;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* BUTTONS */
+
+#parkSmartNavbar .btn {
+  border-radius: 12px;
+  padding: 8px 16px;
+  font-weight: 600;
+  transition: 0.3s ease;
+}
+
+/* OUTLINE BUTTON */
+
+#parkSmartNavbar .btn-outline-light {
+  color: white !important;
+
+  border: 1px solid rgba(255,255,255,0.2);
+
+  background: rgba(255,255,255,0.05);
+}
+
+#parkSmartNavbar .btn-outline-light:hover {
+  background: var(--ps-gradient);
+
+  border-color: transparent;
+
+  color: white !important;
+
+  transform: translateY(-2px);
+
+  box-shadow: 0 8px 20px rgba(37,99,235,0.4);
+}
+
+/* QR BUTTON */
+
+#parkSmartNavbar .btn-warning {
+  background:
+    linear-gradient(135deg,#facc15,#eab308);
+
+  border: none;
+
+  color: #111827 !important;
+
+  font-weight: 700;
+}
+
+/* LOGOUT BUTTON */
+
+#parkSmartNavbar .btn-danger {
+  background:
+    linear-gradient(135deg,#ef4444,#dc2626);
+
+  border: none;
+}
+
+/* TOGGLER */
+
+.navbar-toggler {
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.06);
+}
+
+/* ================= HERO ================= */
+
+.ps-hero {
+  background: var(--ps-gradient);
+
+  color: white;
+
+  border-radius: 28px;
+
+  padding: 40px;
+
+  box-shadow: var(--ps-shadow);
+}
+
+.ps-hero h1 {
+  font-size: 3rem;
+  font-weight: 800;
+}
+
+.ps-hero p {
+  font-size: 1.1rem;
+  opacity: 0.95;
+}
+
+/* ================= CARDS ================= */
+
+.ps-card {
+  background: white;
+
+  border-radius: var(--ps-radius);
+
+  box-shadow: var(--ps-shadow);
+
+  border: none;
+
+  transition: 0.3s ease;
+}
+
+.ps-card:hover {
+  transform: translateY(-5px);
+}
+
+.card {
+  border: none !important;
+  border-radius: var(--ps-radius) !important;
+  box-shadow: var(--ps-shadow);
+}
+
+/* ================= BUTTONS ================= */
+
+.btn-primary {
+  background: var(--ps-gradient) !important;
+  border: none !important;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+}
+
+/* ================= TABLE ================= */
+
+table {
+  border-radius: var(--ps-radius);
+  overflow: hidden;
+}
+
+thead {
+  background: var(--ps-gradient);
+  color: white;
+}
+
+/* ================= INPUTS ================= */
+
+.form-control,
+.form-select {
+  border-radius: 12px !important;
+  padding: 12px !important;
+}
+
+/* ================= BADGES ================= */
+
+.badge {
+  border-radius: 999px;
+  padding: 8px 12px;
+}
+
+/* ================= QR SCANNER ================= */
+
+.qr-scanner-container {
+  background: white;
+
+  border-radius: 20px;
+
+  padding: 20px;
+
+  box-shadow: var(--ps-shadow);
+}
+
+/* ================= ANIMATIONS ================= */
+
+.ps-fade-up {
+  animation: fadeUp 0.6s ease;
+}
+
+@keyframes fadeUp {
+
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 991px) {
+
+  .ps-navbar-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #parkSmartNavbar {
+    width: 100%;
+    margin-top: 15px;
+
+    flex-direction: column;
+
+    align-items: stretch;
+  }
+
+  #parkSmartNavbar .btn {
+    width: 100%;
+  }
+
+  .navbar-toggler {
+    margin-left: auto;
+  }
+
+  .ps-hero {
+    padding: 25px;
+  }
+
+  .ps-hero h1 {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 576px) {
+
+  .ps-hero h1 {
+    font-size: 1.7rem;
+  }
+
+  .card {
+    margin-bottom: 15px;
+  }
+}

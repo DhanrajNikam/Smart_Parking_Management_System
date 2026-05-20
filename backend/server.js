@@ -12,6 +12,10 @@ const {
   checkAndNotifyAvailability
 } = require("./controllers/parkingAvailabilityController");
 
+const {
+  sendEmail
+} = require("./utils/emailService");
+
 const app = express();
 
 /*
@@ -55,6 +59,351 @@ cron.schedule("* * * * *", async () => {
   } catch (error) {
 
     console.log("[Cron Error]", error);
+
+  }
+
+});
+
+/*
+==================================================
+15 MINUTE START REMINDER EMAIL CRON
+==================================================
+*/
+
+cron.schedule("* * * * *", async () => {
+
+  try {
+
+    console.log(
+      "[Cron] Checking upcoming bookings..."
+    );
+
+    const [bookings] =
+      await db.promise().query(`
+        SELECT
+          b.*,
+          u.email,
+          pl.name AS location_name,
+          pl.latitude,
+          pl.longitude
+        FROM bookings b
+        JOIN users u
+          ON b.user_id = u.id
+        JOIN parking_locations pl
+          ON b.location_id = pl.id
+        WHERE b.status = 'active'
+        AND TIMESTAMP(
+              b.booking_date,
+              b.start_time
+            )
+            BETWEEN NOW()
+            AND DATE_ADD(
+                  NOW(),
+                  INTERVAL 15 MINUTE
+                )
+      `);
+
+    for (const booking of bookings) {
+
+      try {
+
+        if (booking.email) {
+
+          const mapsUrl =
+            `https://maps.google.com/?q=${booking.latitude},${booking.longitude}`;
+
+          const emailHtml = `
+          <div style="
+            font-family:Arial;
+            max-width:600px;
+            margin:auto;
+            padding:20px;
+            background:#f5f7fb;
+          ">
+
+            <div style="
+              background:#0d6efd;
+              color:white;
+              padding:20px;
+              border-radius:12px;
+            ">
+              <h2>
+                🚗 Smart Parking Reminder
+              </h2>
+            </div>
+
+            <div style="
+              background:white;
+              padding:25px;
+              border-radius:12px;
+              margin-top:20px;
+              border:1px solid #eee;
+            ">
+
+              <h3 style="color:#0d6efd;">
+                Your booking starts in 15 minutes ⏰
+              </h3>
+
+              <p>
+                <b>Booking Code:</b><br/>
+                ${booking.booking_code}
+              </p>
+
+              <p>
+                <b>Parking Location:</b><br/>
+                ${booking.location_name}
+              </p>
+
+              <p>
+                <b>Slot Number:</b><br/>
+                ${booking.slot_id}
+              </p>
+
+              <p>
+                <b>Start Time:</b><br/>
+                ${booking.booking_date}
+                ${booking.start_time}
+              </p>
+
+              <p>
+                <b>Duration:</b><br/>
+                ${booking.duration} Hour(s)
+              </p>
+
+              <a
+                href="${mapsUrl}"
+                target="_blank"
+                style="
+                  display:inline-block;
+                  background:#0d6efd;
+                  color:white;
+                  padding:12px 18px;
+                  text-decoration:none;
+                  border-radius:8px;
+                  margin-top:10px;
+                "
+              >
+                Open Directions
+              </a>
+
+              <p style="margin-top:30px;">
+                Thank you for using Smart Parking 🚘
+              </p>
+
+            </div>
+
+          </div>
+          `;
+
+          await sendEmail({
+
+            to: booking.email,
+
+            subject:
+              "Parking Reminder - Smart Parking",
+
+            text:
+              `Your parking booking starts in 15 minutes.`,
+
+            html: emailHtml
+
+          });
+
+          console.log(
+            "Start reminder email sent:",
+            booking.booking_code
+          );
+
+        }
+
+      } catch (emailError) {
+
+        console.log(
+          "Reminder Email Error:",
+          emailError
+        );
+
+      }
+
+    }
+
+  } catch (error) {
+
+    console.log(
+      "[Reminder Cron Error]",
+      error
+    );
+
+  }
+
+});
+
+/*
+==================================================
+15 MINUTE END REMINDER EMAIL CRON
+==================================================
+*/
+
+cron.schedule("* * * * *", async () => {
+
+  try {
+
+    console.log(
+      "[Cron] Checking ending bookings..."
+    );
+
+    const [bookings] =
+      await db.promise().query(`
+        SELECT
+          b.*,
+          u.email,
+          pl.name AS location_name
+        FROM bookings b
+        JOIN users u
+          ON b.user_id = u.id
+        JOIN parking_locations pl
+          ON b.location_id = pl.id
+        WHERE b.status = 'active'
+        AND DATE_SUB(
+              DATE_ADD(
+                TIMESTAMP(
+                  b.booking_date,
+                  b.start_time
+                ),
+                INTERVAL b.duration HOUR
+              ),
+              INTERVAL 15 MINUTE
+            )
+            BETWEEN NOW()
+            AND DATE_ADD(
+                  NOW(),
+                  INTERVAL 1 MINUTE
+                )
+      `);
+
+    for (const booking of bookings) {
+
+      try {
+
+        if (booking.email) {
+
+          const endTime = new Date(
+            new Date(
+              `${booking.booking_date} ${booking.start_time}`
+            ).getTime() +
+            booking.duration * 60 * 60 * 1000
+          );
+
+          const emailHtml = `
+          <div style="
+            font-family:Arial;
+            max-width:600px;
+            margin:auto;
+            padding:20px;
+            background:#f5f7fb;
+          ">
+
+            <div style="
+              background:#dc3545;
+              color:white;
+              padding:20px;
+              border-radius:12px;
+            ">
+              <h2>
+                ⏰ Parking Ending Soon
+              </h2>
+            </div>
+
+            <div style="
+              background:white;
+              padding:25px;
+              border-radius:12px;
+              margin-top:20px;
+              border:1px solid #eee;
+            ">
+
+              <h3 style="color:#dc3545;">
+                Your parking session will end in 15 minutes
+              </h3>
+
+              <p>
+                <b>Booking Code:</b><br/>
+                ${booking.booking_code}
+              </p>
+
+              <p>
+                <b>Parking Location:</b><br/>
+                ${booking.location_name}
+              </p>
+
+              <p>
+                <b>Slot Number:</b><br/>
+                ${booking.slot_id}
+              </p>
+
+              <p>
+                <b>End Time:</b><br/>
+                ${endTime}
+              </p>
+
+              <p style="
+                margin-top:20px;
+                color:#6b7280;
+              ">
+                If needed, please extend your booking before expiry to avoid penalties.
+              </p>
+
+              <p style="
+                margin-top:25px;
+                font-size:14px;
+                color:#999;
+              ">
+                Thank you for using Smart Parking 🚘
+              </p>
+
+            </div>
+
+          </div>
+          `;
+
+          await sendEmail({
+
+            to: booking.email,
+
+            subject:
+              "Parking Ending Soon - Smart Parking",
+
+            text:
+              "Your parking session will end in 15 minutes.",
+
+            html: emailHtml
+
+          });
+
+          console.log(
+            "End reminder email sent:",
+            booking.booking_code
+          );
+
+        }
+
+      } catch (emailError) {
+
+        console.log(
+          "End Reminder Email Error:",
+          emailError
+        );
+
+      }
+
+    }
+
+  } catch (error) {
+
+    console.log(
+      "[End Reminder Cron Error]",
+      error
+    );
 
   }
 
@@ -182,19 +531,16 @@ app.use("/api/wallet", walletRoutes);
 
 app.use("/api/support", supportRoutes);
 
-// PARKING AVAILABILITY
 app.use(
   "/api/parking-availability",
   parkingAvailabilityRoutes
 );
 
-// QR ROUTES
 app.use(
   "/api/qr",
   qrRoutes
 );
 
-// ANPR ROUTES
 app.use(
   "/api/anpr",
   anprRoutes

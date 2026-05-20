@@ -1,16 +1,20 @@
 const db = require("../config/db");
-const { createNotification } = require("../utils/notificationHelper");
-const { sendRefundStatusSMS } = require("../utils/notificationHelper");
 
-function getId(req, name, fallback) {
-  const v = req.params?.[name] ?? req.body?.[name] ?? fallback;
-  return v;
-}
+const {
+  createNotification,
+  sendRefundStatusSMS
+} = require("../utils/notificationHelper");
 
+// ======================================
+// GET ALL REFUND REQUESTS
+// ======================================
 exports.getAllRefundRequests = async (req, res) => {
+
   try {
+
     const [rows] = await db.promise().query(
-      `SELECT 
+      `
+      SELECT
         id,
         user_id,
         booking_id,
@@ -21,26 +25,52 @@ exports.getAllRefundRequests = async (req, res) => {
         payment_method,
         status,
         created_at
-       FROM refund_requests
-       ORDER BY created_at DESC`
+      FROM refund_requests
+      ORDER BY created_at DESC
+      `
     );
 
     res.json(rows);
+
   } catch (error) {
-    console.log("getAllRefundRequests error:", error);
-    res.status(500).json({ message: "Server error" });
+
+    console.log(
+      "getAllRefundRequests error:",
+      error
+    );
+
+    res.status(500).json({
+      message: "Server error"
+    });
+
   }
+
 };
 
-async function sendBestEffortRefundSMS({ refundRequest, status }) {
+// ======================================
+// SEND REFUND SMS
+// ======================================
+async function sendBestEffortRefundSMS({
+  refundRequest,
+  status
+}) {
+
   try {
+
     if (!refundRequest?.user_id) return;
 
     const [userRows] = await db.promise().query(
-      "SELECT phone_number FROM users WHERE id = ?",
+      `
+      SELECT phone_number
+      FROM users
+      WHERE id = ?
+      `,
       [refundRequest.user_id]
     );
-    const phone_number = userRows[0]?.phone_number;
+
+    const phone_number =
+      userRows[0]?.phone_number;
+
     if (!phone_number) return;
 
     await sendRefundStatusSMS({
@@ -49,10 +79,21 @@ async function sendBestEffortRefundSMS({ refundRequest, status }) {
       refund_amount: refundRequest.amount,
       status
     });
+
   } catch (e) {
-    console.log("Refund status SMS best-effort failed:", e?.message || e);
+
+    console.log(
+      "Refund status SMS failed:",
+      e?.message || e
+    );
+
   }
+
 }
+
+// ======================================
+// APPROVE REFUND
+// ======================================
 exports.approveRefund = async (req, res) => {
 
   const refundRequestId = req.params.id;
@@ -61,12 +102,18 @@ exports.approveRefund = async (req, res) => {
 
   try {
 
-    connection = await db.promise().getConnection();
+    connection =
+      await db.promise().getConnection();
 
     await connection.beginTransaction();
 
     const [rows] = await connection.query(
-      "SELECT * FROM refund_requests WHERE id = ? FOR UPDATE",
+      `
+      SELECT *
+      FROM refund_requests
+      WHERE id = ?
+      FOR UPDATE
+      `,
       [refundRequestId]
     );
 
@@ -77,6 +124,7 @@ exports.approveRefund = async (req, res) => {
       return res.status(404).json({
         message: "Refund request not found"
       });
+
     }
 
     const refundRequest = rows[0];
@@ -86,23 +134,35 @@ exports.approveRefund = async (req, res) => {
       await connection.rollback();
 
       return res.status(400).json({
-        message: `Refund request already ${refundRequest.status}`
+        message:
+          `Refund already ${refundRequest.status}`
       });
+
     }
 
+    // Approve refund
+
     await connection.query(
-      "UPDATE refund_requests SET status='approved' WHERE id=?",
+      `
+      UPDATE refund_requests
+      SET status = 'approved'
+      WHERE id = ?
+      `,
       [refundRequestId]
     );
+
+    // Notification
 
     await createNotification(
       refundRequest.user_id,
       `✅ Refund approved. Amount ₹${refundRequest.amount}`,
-      "info",
+      "success",
       refundRequest.booking_id
     );
 
     await connection.commit();
+
+    // SMS
 
     await sendBestEffortRefundSMS({
       refundRequest,
@@ -115,10 +175,15 @@ exports.approveRefund = async (req, res) => {
 
   } catch (error) {
 
-    console.log("approveRefund error:", error);
+    console.log(
+      "approveRefund error:",
+      error
+    );
 
     if (connection) {
+
       await connection.rollback();
+
     }
 
     res.status(500).json({
@@ -128,12 +193,18 @@ exports.approveRefund = async (req, res) => {
   } finally {
 
     if (connection) {
+
       connection.release();
+
     }
+
   }
+
 };
 
-
+// ======================================
+// REJECT REFUND
+// ======================================
 exports.rejectRefund = async (req, res) => {
 
   const refundRequestId = req.params.id;
@@ -142,12 +213,18 @@ exports.rejectRefund = async (req, res) => {
 
   try {
 
-    connection = await db.promise().getConnection();
+    connection =
+      await db.promise().getConnection();
 
     await connection.beginTransaction();
 
     const [rows] = await connection.query(
-      "SELECT * FROM refund_requests WHERE id = ? FOR UPDATE",
+      `
+      SELECT *
+      FROM refund_requests
+      WHERE id = ?
+      FOR UPDATE
+      `,
       [refundRequestId]
     );
 
@@ -158,6 +235,7 @@ exports.rejectRefund = async (req, res) => {
       return res.status(404).json({
         message: "Refund request not found"
       });
+
     }
 
     const refundRequest = rows[0];
@@ -167,40 +245,71 @@ exports.rejectRefund = async (req, res) => {
       await connection.rollback();
 
       return res.status(400).json({
-        message: `Refund request already ${refundRequest.status}`
+        message:
+          `Refund already ${refundRequest.status}`
       });
+
     }
 
+    // Reject refund
+
     await connection.query(
-      "UPDATE refund_requests SET status='rejected' WHERE id=?",
+      `
+      UPDATE refund_requests
+      SET status = 'rejected'
+      WHERE id = ?
+      `,
       [refundRequestId]
     );
 
-    await connection.query(
-      "UPDATE users SET wallet = wallet + ? WHERE id = ?",
-      [refundRequest.amount, refundRequest.user_id]
-    );
+    // Return money to wallet
 
     await connection.query(
-      `INSERT INTO wallet_transactions
-      (user_id, booking_id, amount, type, description)
-      VALUES (?, ?, ?, 'credit', ?)`,
+      `
+      UPDATE users
+      SET wallet = wallet + ?
+      WHERE id = ?
+      `,
+      [
+        refundRequest.amount,
+        refundRequest.user_id
+      ]
+    );
+
+    // Wallet transaction
+
+    await connection.query(
+      `
+      INSERT INTO wallet_transactions
+      (
+        user_id,
+        booking_id,
+        amount,
+        type,
+        description
+      )
+      VALUES (?, ?, ?, 'credit', ?)
+      `,
       [
         refundRequest.user_id,
         refundRequest.booking_id,
         refundRequest.amount,
-        `Refund rejected → wallet credited back`
+        "Refund rejected → wallet credited back"
       ]
     );
+
+    // Notification
 
     await createNotification(
       refundRequest.user_id,
       `❌ Refund rejected. ₹${refundRequest.amount} returned to wallet`,
-      "alert",
+      "warning",
       refundRequest.booking_id
     );
 
     await connection.commit();
+
+    // SMS
 
     await sendBestEffortRefundSMS({
       refundRequest,
@@ -213,10 +322,15 @@ exports.rejectRefund = async (req, res) => {
 
   } catch (error) {
 
-    console.log("rejectRefund error:", error);
+    console.log(
+      "rejectRefund error:",
+      error
+    );
 
     if (connection) {
+
       await connection.rollback();
+
     }
 
     res.status(500).json({
@@ -226,7 +340,11 @@ exports.rejectRefund = async (req, res) => {
   } finally {
 
     if (connection) {
+
       connection.release();
+
     }
+
   }
+
 };
